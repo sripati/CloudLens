@@ -1,0 +1,111 @@
+# CloudLens stack: PostgreSQL + FastAPI backend + React/nginx frontend + Prometheus + Alertmanager
+# + mock Slack/Teams receiver.
+#
+#   cp .env.example .env     # then edit secrets
+#   docker compose up -d --build
+#   open http://localhost:8080
+name: cloudlens
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"   # cap log files so the EC2 disk never fills up
+    max-file: "3"
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-cloudlens}
+      POSTGRES_USER: ${POSTGRES_USER:-cloudlens}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    logging: *default-logging
+
+  backend:
+    build:
+      context: ./backend
+      args:
+        INSTALL_CLOUD_SDKS: ${INSTALL_CLOUD_SDKS:-true}
+    image: cloudlens-backend:latest
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-cloudlens}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-cloudlens}
+      ALERT_DELIVERY: ${ALERT_DELIVERY:-alertmanager}
+    volumes:
+      # optional: GCP service-account key (set GOOGLE_APPLICATION_CREDENTIALS=/secrets/gcp-key.json)
+      - ./secrets:/secrets:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-8000}:8000"   # API docs at /docs (localhost only)
+    logging: *default-logging
+
+  frontend:
+    build: ./frontend
+    image: cloudlens-frontend:latest
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${HTTP_PORT:-8080}:80"
+    logging: *default-logging
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-15d}
+      - --web.enable-lifecycle
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+      - promdata:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    depends_on:
+      - backend
+    logging: *default-logging
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    restart: unless-stopped
+    env_file: .env
+    entrypoint:
+      - /bin/sh
+      - -c
+      - >
+        sed -e "s|__WEBHOOK_TOKEN__|$${ALERTMANAGER_WEBHOOK_TOKEN}|g"
+        -e "s|__SLACK_WEBHOOK_URL__|$${SLACK_WEBHOOK_URL}|g"
+        /etc/alertmanager/alertmanager.tmpl.yml > /tmp/alertmanager.yml &&
+        exec /bin/alertmanager --config.file=/tmp/alertmanager.yml --storage.path=/alertmanager --cluster.listen-address=
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.tmpl.yml:/etc/alertmanager/alertmanager.tmpl.yml:ro
+      - amdata:/alertmanager
+    ports:
+      - "127.0.0.1:9093:9093"
+    logging: *default-logging
+
+  mock-receiver:
+    build: ./monitoring/mock-receiver
+    image: cloudlens-mock-receiver:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9000:9000"
+    logging: *default-logging
+
+volumes:
+  pgdata:
+  promdata:
+  amdata:

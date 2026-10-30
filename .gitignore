@@ -1,0 +1,29 @@
+# secrets
+.env
+secrets/*
+!secrets/README.md
+
+# python
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# node
+node_modules/
+frontend/dist/
+coverage/
+
+# os / editors
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# local data
+*.db
+backups/

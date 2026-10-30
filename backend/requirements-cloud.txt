@@ -1,0 +1,11 @@
+# Cloud provider SDKs (only needed when DATA_SOURCE=live).
+# The Docker image installs them by default; build with --build-arg INSTALL_CLOUD_SDKS=false
+# for a smaller image when you only run in mock mode.
+boto3==1.35.90
+azure-identity==1.19.0
+azure-mgmt-costmanagement==4.0.1
+azure-mgmt-resource==23.2.0
+azure-mgmt-monitor==6.0.2
+google-cloud-bigquery==3.27.0
+google-cloud-monitoring==2.24.0
+google-cloud-billing==1.14.1

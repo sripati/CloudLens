@@ -1,0 +1,202 @@
+[
+ {
+  "title": "1. Introduction",
+  "level": 1,
+  "page": 3
+ },
+ {
+  "title": "1.1 Background",
+  "level": 2,
+  "page": 3
+ },
+ {
+  "title": "1.2 Problem statement",
+  "level": 2,
+  "page": 3
+ },
+ {
+  "title": "1.3 Project goals",
+  "level": 2,
+  "page": 3
+ },
+ {
+  "title": "1.4 Scope",
+  "level": 2,
+  "page": 3
+ },
+ {
+  "title": "1.5 Report organisation",
+  "level": 2,
+  "page": 3
+ },
+ {
+  "title": "2. Existing Solutions and Gap Analysis",
+  "level": 1,
+  "page": 4
+ },
+ {
+  "title": "3. Requirements",
+  "level": 1,
+  "page": 5
+ },
+ {
+  "title": "3.1 Functional requirements",
+  "level": 2,
+  "page": 5
+ },
+ {
+  "title": "3.2 Non-functional requirements",
+  "level": 2,
+  "page": 5
+ },
+ {
+  "title": "4. System Architecture",
+  "level": 1,
+  "page": 6
+ },
+ {
+  "title": "4.1 Data flow",
+  "level": 2,
+  "page": 6
+ },
+ {
+  "title": "4.2 Technology choices",
+  "level": 2,
+  "page": 6
+ },
+ {
+  "title": "5. Design",
+  "level": 1,
+  "page": 8
+ },
+ {
+  "title": "5.1 Unified cost schema",
+  "level": 2,
+  "page": 8
+ },
+ {
+  "title": "5.2 Database tables",
+  "level": 2,
+  "page": 8
+ },
+ {
+  "title": "5.3 API design",
+  "level": 2,
+  "page": 8
+ },
+ {
+  "title": "5.4 Module structure",
+  "level": 2,
+  "page": 8
+ },
+ {
+  "title": "6. Implementation",
+  "level": 1,
+  "page": 10
+ },
+ {
+  "title": "6.1 Cloud integration (Sprint 1)",
+  "level": 2,
+  "page": 10
+ },
+ {
+  "title": "6.2 Aggregation and storage (Sprint 2)",
+  "level": 2,
+  "page": 10
+ },
+ {
+  "title": "6.3 Real-time dashboard (Sprint 3)",
+  "level": 2,
+  "page": 10
+ },
+ {
+  "title": "6.4 Historical analysis (Sprint 4)",
+  "level": 2,
+  "page": 11
+ },
+ {
+  "title": "6.5 Resources and drill-down",
+  "level": 2,
+  "page": 12
+ },
+ {
+  "title": "6.6 Authentication and roles",
+  "level": 2,
+  "page": 13
+ },
+ {
+  "title": "6.7 Currency and theme",
+  "level": 2,
+  "page": 13
+ },
+ {
+  "title": "7. Alerting and Notifications (Sprint 5)",
+  "level": 1,
+  "page": 14
+ },
+ {
+  "title": "8. Cost Optimisation",
+  "level": 1,
+  "page": 16
+ },
+ {
+  "title": "8.1 Savings for the monitored clouds",
+  "level": 2,
+  "page": 16
+ },
+ {
+  "title": "8.2 Keeping the platform itself cheap",
+  "level": 2,
+  "page": 16
+ },
+ {
+  "title": "9. Testing",
+  "level": 1,
+  "page": 17
+ },
+ {
+  "title": "10. Deployment",
+  "level": 1,
+  "page": 18
+ },
+ {
+  "title": "11. Results",
+  "level": 1,
+  "page": 19
+ },
+ {
+  "title": "12. Conclusion and Future Scope",
+  "level": 1,
+  "page": 25
+ },
+ {
+  "title": "12.1 Conclusion",
+  "level": 2,
+  "page": 25
+ },
+ {
+  "title": "12.2 Learnings",
+  "level": 2,
+  "page": 25
+ },
+ {
+  "title": "12.3 Future scope",
+  "level": 2,
+  "page": 25
+ },
+ {
+  "title": "References",
+  "level": 1,
+  "page": 26
+ },
+ {
+  "title": "Appendix A: Repository and Documentation Map",
+  "level": 1,
+  "page": 27
+ },
+ {
+  "title": "Appendix B: Key Configuration",
+  "level": 1,
+  "page": 28
+ }
+]

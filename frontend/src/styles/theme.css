@@ -1,0 +1,65 @@
+/* Design tokens for the dark and light themes (toggle sets <html data-theme="...">).
+   Values match the approved Dashboard screen design. */
+:root,
+:root[data-theme='dark'] {
+  --bg: #0a0e16;
+  --surface: #111827;
+  --surface-2: #1a2335;
+  --border: #243047;
+  --text: #e8ecf4;
+  --muted: #a3adc2;
+  --faint: #33405c;
+  --grid: #1c2639;
+  --accent: #5b9bff;
+  --accent-text: #0a0e16;
+  --nav-active: rgba(91, 155, 255, 0.14);
+  --nav-active-text: #d3e3ff;
+  --crit: #f87171;
+  --warn: #fbbf24;
+  --ok: #34d399;
+  --info: #7db2ff;
+  --crit-bg: rgba(248, 113, 113, 0.12);
+  --warn-bg: rgba(251, 191, 36, 0.12);
+  --ok-bg: rgba(52, 211, 153, 0.12);
+  --info-bg: rgba(91, 155, 255, 0.14);
+  --aws: #f5a524;
+  --azure: #5b9bff;
+  --gcp: #34d399;
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+  --bg: #f3f5f9;
+  --surface: #ffffff;
+  --surface-2: #eef1f6;
+  --border: #dce2eb;
+  --text: #0f172a;
+  --muted: #4a5468;
+  --faint: #c9d2df;
+  --grid: #e9edf3;
+  --accent: #1d5fd6;
+  --accent-text: #ffffff;
+  --nav-active: #e6eefc;
+  --nav-active-text: #1d4fb0;
+  --crit: #b42318;
+  --warn: #a15c07;
+  --ok: #067647;
+  --info: #1d4ed8;
+  --crit-bg: #fdecea;
+  --warn-bg: #fef3e2;
+  --ok-bg: #e7f6ee;
+  --info-bg: #e8effd;
+  --aws: #b45309;
+  --azure: #1d5fd6;
+  --gcp: #047857;
+  --shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  color-scheme: light;
+}
+
+:root {
+  --font: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', monospace;
+  --radius: 14px;
+  --radius-sm: 10px;
+}

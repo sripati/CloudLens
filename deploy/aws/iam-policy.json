@@ -1,0 +1,29 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "CloudLensCostExplorerRead",
+      "Effect": "Allow",
+      "Action": ["ce:GetCostAndUsage", "ce:GetCostForecast", "ce:GetDimensionValues", "ce:GetTags"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "CloudLensInventoryRead",
+      "Effect": "Allow",
+      "Action": ["ec2:DescribeInstances", "ec2:DescribeRegions", "rds:DescribeDBInstances", "rds:ListTagsForResource"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "CloudLensMetricsRead",
+      "Effect": "Allow",
+      "Action": ["cloudwatch:GetMetricData", "cloudwatch:ListMetrics"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "CloudLensIdentity",
+      "Effect": "Allow",
+      "Action": ["sts:GetCallerIdentity"],
+      "Resource": "*"
+    }
+  ]
+}

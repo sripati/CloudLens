@@ -1,0 +1,52 @@
+groups:
+  # User-defined rules from the CloudLens Alerts screen.
+  # The backend evaluates each rule and exports cloudlens_alert_rule_breached{rule_id,rule_name,severity,...}.
+  # This single Prometheus rule turns every breached series into an alert that keeps the rule's labels.
+  - name: cloudlens-dashboard-rules
+    rules:
+      - alert: CloudLensRuleBreached
+        expr: cloudlens_alert_rule_breached == 1
+        for: 1m
+        annotations:
+          summary: "{{ $labels.rule_name }}"
+          description: "Rule {{ $labels.rule_name }} ({{ $labels.metric }}) is breached for provider={{ $labels.provider }} environment={{ $labels.environment }}."
+
+  # Built-in platform health alerts.
+  - name: cloudlens-platform
+    rules:
+      - alert: CloudLensBackendDown
+        expr: up{job="cloudlens-backend"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          route: infra
+        annotations:
+          summary: "CloudLens backend is down"
+          description: "Prometheus cannot scrape the CloudLens backend for 2 minutes."
+
+      - alert: CloudLensSyncFailing
+        expr: cloudlens_sync_last_run_success == 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Cloud data sync failing for {{ $labels.provider }}"
+          description: "The last sync run for {{ $labels.provider }} failed. Check Cloud Accounts > Sync history."
+
+      - alert: CloudLensDataStale
+        expr: time() - cloudlens_sync_last_success_timestamp_seconds > 2 * 86400
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "No successful {{ $labels.provider }} sync for 2 days"
+          description: "Cost data for {{ $labels.provider }} is older than 48 hours."
+
+      - alert: CloudLensHighApiLatency
+        expr: histogram_quantile(0.95, sum(rate(cloudlens_http_request_duration_seconds_bucket[5m])) by (le)) > 2
+        for: 10m
+        labels:
+          severity: info
+        annotations:
+          summary: "CloudLens API p95 latency above 2s"
+          description: "Dashboard API responses are slow; check database load."
