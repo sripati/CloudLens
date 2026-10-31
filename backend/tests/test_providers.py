@@ -138,7 +138,7 @@ def test_aws_fetch_costs_paginates_with_stubber():
     stub.add_response("get_cost_and_usage", page("7.0"), expected_params=None)
     stub.activate()
 
-    p = AWSProvider()
+    p = AWSProvider(config={"cost_explorer_region": "us-east-1", "environment": "development"})
     p.is_configured = lambda: True
     p._session = session
     p._account = "111122223333"

@@ -111,6 +111,8 @@ def _resource_id(provider: str, asset: MockAsset) -> str:
 class MockProvider(CloudProvider):
     """One instance per cloud (aws / azure / gcp)."""
 
+    source = "mock"
+
     def __init__(self, provider: str, overrides: Optional[List[dict]] = None, now: Optional[datetime] = None):
         super().__init__()
         self.name = provider
@@ -197,7 +199,7 @@ class MockProvider(CloudProvider):
                 region=a.region,
                 sku=a.sku,
                 status="running",
-                tags={get_settings().ENV_TAG_KEY: a.env, "owner": "devops", "managed-by": "terraform"},
+                tags={"environment": a.env, "owner": "devops", "managed-by": "terraform"},
             )
             for a in self.assets
             if a.billable_resource
@@ -250,4 +252,4 @@ class MockProvider(CloudProvider):
         return out
 
     def test_connection(self) -> Dict[str, object]:
-        return {"ok": True, "message": "Mock data generator active (DATA_SOURCE=mock)", "account": self.account_id()}
+        return {"ok": True, "message": "Mock data generator active", "account": self.account_id()}

@@ -23,8 +23,9 @@ environment and resource type, and sends **alerts to Slack and Microsoft Teams**
 
 - **Unified multi-cloud view.** Costs from all three providers are normalized into one schema covering
   provider, account, day, service, resource type, environment, region and resource.
-- **Mock / live switch.** `DATA_SOURCE=mock` runs everything with a realistic deterministic data generator.
-  `DATA_SOURCE=live` calls the real cloud APIs with the credentials in `.env`.
+- **Mock or Live, per cloud.** Every cloud starts on Mock, a realistic deterministic generator. On the Cloud Accounts screen,
+  a cloud can go Live with one real account per environment, entered in a form, tested first and stored encrypted. Nothing about
+  Live is kept in `.env`. Clouds can be mixed; see [docs/live-cloud-setup.md](docs/live-cloud-setup.md).
 - **Real-time view.** Utilization is sampled every 5 minutes, today's running cost every 15 minutes, and the
   dashboard auto-refreshes every 60 seconds.
 - **Historical analysis.** Daily trends with a 7-day moving average, month-over-month changes,
@@ -52,7 +53,7 @@ docker compose up -d --build
 |---|---|
 | http://localhost:8080 | Dashboard (login `admin@cloudlens.dev` / `Admin@123` unless changed in `.env`) |
 | http://localhost:8080/docs | Swagger API documentation |
-| http://localhost:8080/mock-inbox/ | Mock Slack/Teams inbox (alerts land here by default) |
+| http://localhost:8080/mock-inbox/ | Test Slack/Teams inbox (alerts land here until webhooks are saved in Settings) |
 | http://localhost:9090 | Prometheus (localhost only) |
 | http://localhost:9093 | Alertmanager (localhost only) |
 
@@ -79,7 +80,7 @@ cd monitoring/mock-receiver && uvicorn app:app --port 9000
 ## Tests
 
 ```bash
-make test            # backend (pytest, 84 tests) + frontend (vitest, 31 tests)
+make test            # backend (pytest, 144 tests) + frontend (vitest, 44 tests)
 make test-backend-pg # same backend suite against PostgreSQL
 ```
 
@@ -113,7 +114,8 @@ make test-backend-pg # same backend suite against PostgreSQL
 | Document | Purpose |
 |---|---|
 | [docs/architecture.md](docs/architecture.md) | System design, data flow, technology choices |
-| [docs/setup-guide.md](docs/setup-guide.md) | Installation, configuration and live cloud credentials |
+| [docs/live-cloud-setup.md](docs/live-cloud-setup.md) | **Connect real AWS, Azure or GCP accounts:** steps, cost, security, limits |
+| [docs/setup-guide.md](docs/setup-guide.md) | Installation and configuration |
 | [docs/user-guide.md](docs/user-guide.md) | How to use every screen |
 | [docs/api-reference.md](docs/api-reference.md) | REST endpoints |
 | [docs/database.md](docs/database.md) | Schema, indexes, retention |

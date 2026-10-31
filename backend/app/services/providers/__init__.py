@@ -1,7 +1,7 @@
-"""Provider factory: returns mock or live connectors depending on DATA_SOURCE in .env."""
+"""Provider factory: one mock connector per cloud in Mock mode, one live connector per saved connection in Live mode."""
 from __future__ import annotations
 
-from typing import Dict, Optional
+from typing import Dict, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
 
@@ -9,30 +9,32 @@ from app.core.config import get_settings
 from app.services.providers.base import CloudProvider
 
 
-def get_provider(name: str, db: Optional[Session] = None) -> CloudProvider:
-    from app.services import settings_service
-
-    s = get_settings()
-    inr = float(settings_service.get_value(db, "exchange_rate_inr")) if db is not None else s.DEFAULT_EXCHANGE_RATE_INR
-    if s.DATA_SOURCE == "mock":
-        from app.services.providers.mock import MockProvider
-
-        overrides = settings_service.get_value(db, "mock_anomalies") if db is not None else []
-        return MockProvider(name, overrides=overrides or [])
+def build_live_provider(name: str, inr: float, config: Optional[Dict[str, str]] = None) -> CloudProvider:
     if name == "aws":
         from app.services.providers.aws import AWSProvider
 
-        return AWSProvider(inr_rate=inr)
+        return AWSProvider(inr_rate=inr, config=config)
     if name == "azure":
         from app.services.providers.azure import AzureProvider
 
-        return AzureProvider(inr_rate=inr)
+        return AzureProvider(inr_rate=inr, config=config)
     if name == "gcp":
         from app.services.providers.gcp import GCPProvider
 
-        return GCPProvider(inr_rate=inr)
+        return GCPProvider(inr_rate=inr, config=config)
     raise ValueError(f"Unknown provider {name}")
 
 
-def get_providers(db: Optional[Session] = None) -> Dict[str, CloudProvider]:
-    return {name: get_provider(name, db) for name in get_settings().enabled_providers}
+def connectors_for(name: str, db: Session) -> List[CloudProvider]:
+    from app.services import cloud_accounts, settings_service
+
+    if cloud_accounts.mode_of(db, name) == "mock":
+        from app.services.providers.mock import MockProvider
+
+        return [MockProvider(name, overrides=settings_service.get_value(db, "mock_anomalies") or [])]
+    inr = float(settings_service.get_value(db, "exchange_rate_inr"))
+    return [build_live_provider(name, inr, cloud_accounts.effective_config(db, name, conn.environment)) for conn in cloud_accounts.saved_connections(db, name)]
+
+
+def get_connectors(db: Session) -> List[Tuple[str, CloudProvider]]:
+    return [(name, c) for name in get_settings().enabled_providers for c in connectors_for(name, db)]

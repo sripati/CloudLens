@@ -26,10 +26,10 @@ The page refreshes itself every minute.
 
 ## 3. Filtering and drilling down
 
-The filter bar appears on Dashboard, Cost Explorer and Resources, and the selection carries across them:
+The filter bar appears on Dashboard, Cost Explorer, Resources and Reports, and the selection carries across them:
 
 - **Cloud provider:** All, AWS, Azure or GCP
-- **Environment:** production, staging, development, unassigned (untagged)
+- **Environment:** All environments, Production, Staging or Development
 - **Resource type:** compute, containers, database, storage, networking, other
 - **Date range:** click the date button to open the calendar.
   - **Quick ranges** on the left apply in one click: Last 7 / 30 / 90 days, This month, Last month, Last 3 / 6 / 12 months,
@@ -86,20 +86,20 @@ also sent. Repeats happen every 4 hours while a problem persists.
 someone is handling it.
 
 ## 7. Reports
-1. Open **Reports** and choose the period with the date button: *This month*, *Last month*, *Last 3 / 6 / 12 months*,
-   *Year to date*, *Last 30 / 90 days*, or any custom range.
+1. Open **Reports** and set the filter bar, the same one as on the Dashboard: cloud provider, environment, resource type
+   and date range. The selection carries across screens, so a filter set on the Dashboard is already applied here.
 2. The report shows the total and daily average, the previous period of the same length, budget use (the monthly budget
    pro-rated to the days in the range), a **monthly breakdown** table and chart (cost per provider per month, budget %,
    change vs the previous month), breakdowns by provider / environment / resource type, top services, anomalies and
    recommendations.
-3. **Download CSV** saves the full report for that range (`cloudlens_report_<start>_to_<end>.csv`), including the
-   monthly breakdown. **Print / PDF** prints the page without the sidebar and toolbar.
+3. **Download CSV** saves the full report for those filters (`cloudlens_report_<start>_to_<end>.csv`), including the
+   filters used and the monthly breakdown. **Print / PDF** prints the page without the sidebar and toolbar.
 
 Example: for a six-month report choose **Last 6 months** (for example 1 May – 31 Oct 2026), then **Download CSV**.
 
 ## 8. Administration
 
-- **Cloud Accounts:** check each provider's connection (*Test connection*), run a sync now, view scheduled jobs
+- **Cloud Accounts:** choose **Mock** or **Live** data for each cloud, connect an account for each environment with **Configuration** ([guide](live-cloud-setup.md)), check its connection (*Test connection*), run a sync now, view scheduled jobs
   and the sync history (including API call counts). In mock mode you can **simulate a cost spike** to demonstrate alerting.
 - **Users & Roles:** add users, change roles, disable or delete accounts.
 - **Settings:** budgets (total and per provider), INR exchange rate, preferred notification channel, and the
@@ -114,4 +114,4 @@ Example: for a six-month report choose **Last 6 months** (for example 1 May – 
 | Anomaly | A day more than 40 % above the previous 7-day average |
 | Idle | 7-day average CPU below the idle threshold (default 10 %) |
 | Over-utilized | Latest CPU ≥ 80 % (storage ≥ 90 %) |
-| Unassigned | Cost without an environment tag |
+| Unassigned | Mock cost that belongs to no environment (for example, AWS Support). It is not a filter choice, but it counts in *All environments* and shows as its own row in the environment breakdowns |

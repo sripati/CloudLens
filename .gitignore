@@ -1,7 +1,5 @@
 # secrets
 .env
-secrets/*
-!secrets/README.md
 
 # python
 __pycache__/

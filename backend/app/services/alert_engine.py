@@ -180,7 +180,7 @@ def record_event(
         threshold=rule.threshold if rule else None, labels=labels or (_labels(rule) if rule else {}), source=source,
         starts_at=starts_at, ends_at=ends_at, notified_channels=",".join(channels),
     )
-    status_sent, err = notifier.send(channels, event.title, event.message, severity, status, fields)
+    status_sent, err = notifier.send(channels, event.title, event.message, severity, status, fields, settings_service.webhook_urls(db))
     event.notification_status = status_sent
     event.notification_error = err
     db.add(event)

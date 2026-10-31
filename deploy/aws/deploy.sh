@@ -18,16 +18,13 @@ cd "$(dirname "$0")/../.."
 
 echo "==> Syncing project to $EC2_HOST:$REMOTE_DIR"
 rsync -az --delete -e "ssh -i $SSH_KEY -o StrictHostKeyChecking=accept-new" \
-  --exclude node_modules --exclude .git --exclude frontend/dist --exclude .env --exclude 'secrets/*.json' \
+  --exclude node_modules --exclude .git --exclude frontend/dist --exclude .env \
   --exclude __pycache__ --exclude docs/report --exclude backups \
   ./ "$EC2_USER@$EC2_HOST:$REMOTE_DIR/"
 
 if [ -f .env.staging ]; then
   echo "==> Uploading .env.staging as .env"
   scp -i "$SSH_KEY" .env.staging "$EC2_USER@$EC2_HOST:$REMOTE_DIR/.env"
-fi
-if [ -f secrets/gcp-key.json ]; then
-  scp -i "$SSH_KEY" secrets/gcp-key.json "$EC2_USER@$EC2_HOST:$REMOTE_DIR/secrets/gcp-key.json"
 fi
 
 echo "==> Building and starting containers"

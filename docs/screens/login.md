@@ -8,7 +8,7 @@
 Authenticate users and obtain a JWT.
 
 ## Layout
-A centered card with the CloudLens logo, a theme toggle, email and password fields, and a *Sign in* button.
+A centered card with the CloudLens logo, email and password fields, and a *Sign in* button.
 A note says the default accounts are defined in `.env`.
 
 ## Behaviour

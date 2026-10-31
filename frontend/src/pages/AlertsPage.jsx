@@ -74,6 +74,7 @@ function RuleForm({ initial, metrics, onClose, onSaved }) {
           <select id="r-env" className="select" value={form.environment || ''} onChange={set('environment')}>
             <option value="">All environments</option>
             {ENVIRONMENTS.map((e) => <option key={e.value} value={e.value}>{e.label}</option>)}
+            {form.environment === 'unassigned' && <option value="unassigned">{ENV_LABEL.unassigned}</option>}
           </select>
         </div>
         <div className="field">
@@ -171,7 +172,7 @@ export default function AlertsPage() {
               </select>
               <button type="button" className="btn" onClick={() => act(() => api.post('/alerts/test', { channel: testChannel }), 'Test notification sent')}><Icon name="send" size={16} /> Send</button>
             </div>
-            <div className="tiny" style={{ marginTop: 8 }}>{settings?.system?.slack_is_mock ? 'Webhooks point to the mock receiver' : 'Using configured webhooks'}</div>
+            <div className="tiny" style={{ marginTop: 8 }}>{`Slack: ${settings?.system?.webhooks?.slack_saved ? 'saved webhook' : 'test inbox'} · Teams: ${settings?.system?.webhooks?.teams_saved ? 'saved webhook' : 'test inbox'}`}</div>
           </div>
         )}
       </section>

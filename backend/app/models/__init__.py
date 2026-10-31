@@ -5,5 +5,6 @@ from app.models.resource import Resource, ResourceMetric
 from app.models.alert import AlertRule, AlertEvent
 from app.models.sync import SyncRun
 from app.models.setting import AppSetting
+from app.models.cloud_account import CloudAccount, CloudConnection
 
-__all__ = ["User", "CostRecord", "Resource", "ResourceMetric", "AlertRule", "AlertEvent", "SyncRun", "AppSetting"]
+__all__ = ["User", "CostRecord", "Resource", "ResourceMetric", "AlertRule", "AlertEvent", "SyncRun", "AppSetting", "CloudAccount", "CloudConnection"]

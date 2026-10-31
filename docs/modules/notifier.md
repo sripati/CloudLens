@@ -13,8 +13,8 @@ Delivery status and errors are stored on the `alert_events` row and shown in **A
 
 ## Configuration
 
-`SLACK_WEBHOOK_URL`, `TEAMS_WEBHOOK_URL` (secrets, `.env` only) and the preferred channel in Settings
-(`notification_channel`). By default both URLs point at the mock receiver.
+The webhook URLs and preferred channel (`notification_channel`) are set in Settings. Until URLs are saved, both channels use the
+bundled test inbox (`monitoring/mock-receiver`).
 
 ## Testing
 

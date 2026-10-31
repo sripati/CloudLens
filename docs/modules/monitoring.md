@@ -18,7 +18,7 @@
 - Route `route="infra"` goes to the `infra-direct` receiver (Slack directly) for backend-down alerts.
 - Grouping: `alertname, rule_id, provider`; `group_wait 30s`, `group_interval 5m`, `repeat_interval 4h`.
 - Inhibition: BackendDown suppresses Sync* and DataStale alerts.
-- Placeholders `__WEBHOOK_TOKEN__` and `__SLACK_WEBHOOK_URL__` are replaced at container start (see the compose entrypoint).
+- `__WEBHOOK_TOKEN__` is replaced at container start (see the compose entrypoint). The Slack URL comes from `/shared/slack_webhook_url`, written by the backend.
 - Validate: `amtool check-config <rendered file>`.
 
 ## Mock receiver (`monitoring/mock-receiver/app.py`)

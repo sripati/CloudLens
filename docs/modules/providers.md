@@ -20,9 +20,14 @@ signals missing credentials; ingestion records it as a *skipped* run.
 
 ## Factory (`__init__.py`)
 
-`get_provider(name, db)` returns `MockProvider` when `DATA_SOURCE=mock`, otherwise the live class.
-It passes the INR exchange rate from Settings and any injected mock anomalies.
-`get_providers(db)` returns all `ENABLED_PROVIDERS`.
+`connectors_for(name, db)` reads the cloud's mode (`services/cloud_accounts.py`). In Mock mode it returns one `MockProvider`, with the
+INR exchange rate from Settings and any injected anomalies. In Live mode it returns one live connector per saved connection.
+`get_connectors(db)` returns those for all `ENABLED_PROVIDERS`, and each one gets its own `sync_runs` row.
+`build_live_provider(name, inr, config)` builds a connector from any config, which is how the form tests unsaved values.
+Every connector has a `source` (`mock` or `live`) and, when live, an `environment`; both are stored on the rows it produces, and the
+environment replaces whatever tags say.
+`test_connection()` runs one check per permission through `CloudProvider.run_checks` and returns
+`{ok, message, account, checks: [{name, ok, detail}]}`, with a plain-language `hint` for known failures and secrets removed.
 
 ## Mock (`mock.py`)
 
@@ -41,12 +46,12 @@ It passes the INR exchange rate from Settings and any injected mock anomalies.
 
 | Data | API | Notes |
 |---|---|---|
-| Costs | `ce.get_cost_and_usage` | DAILY, `UnblendedCost` + `UsageQuantity`, GroupBy SERVICE + TAG `ENV_TAG_KEY`, follows `NextPageToken` |
-| Inventory | `ec2.describe_instances`, `rds.describe_db_instances` | Per region in `AWS_REGIONS`; `Name` tag becomes the display name |
+| Costs | `ce.get_cost_and_usage` | DAILY, `UnblendedCost` + `UsageQuantity`, GroupBy SERVICE, filtered to this account (`LINKED_ACCOUNT`), follows `NextPageToken` |
+| Inventory | `ec2.describe_instances`, `rds.describe_db_instances` | Per region in the connection's *Regions to scan*; RDS ids are ARNs because identifiers repeat across accounts; `Name` tag becomes the display name |
 | Metrics | `cloudwatch.get_metric_data` | CPUUtilization Average, up to 400 queries per call |
 | Identity | `sts.get_caller_identity` | Cached account id |
 
-Credentials: access keys, `AWS_PROFILE`, or `AWS_USE_DEFAULT_CREDENTIALS=true` (instance role).
+Credentials: access keys or the EC2 instance role, chosen in the form.
 `parse_cost_explorer(pages, account, inr_rate)` is pure and unit-tested; a Stubber test covers pagination.
 
 ## Azure (`azure.py`)
@@ -54,7 +59,7 @@ Credentials: access keys, `AWS_PROFILE`, or `AWS_USE_DEFAULT_CREDENTIALS=true` (
 | Data | API | Notes |
 |---|---|---|
 | Costs | `CostManagementClient.query.usage` | ActualCost, Daily, grouped by ServiceName, ResourceLocation, TagKey; **7-day windows** stay under the 1000-row page size |
-| Inventory | `ResourceManagementClient.resources.list` | Types mapped by `AZURE_TYPES` |
+| Inventory | `ResourceManagementClient.resources.list` | Types mapped by the connection's settings |
 | Metrics | `MonitorManagementClient.metrics.list` | Metric name per type (Percentage CPU, node_cpu_usage_percentage, cpu_percent, CpuPercentage) |
 
 `parse_cost_query` handles column order by name; `_merge_duplicates` sums rows with the same key.

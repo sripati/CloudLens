@@ -19,6 +19,7 @@ class SyncRun(Base):
     provider: Mapped[str] = mapped_column(String(10), index=True)
     job: Mapped[str] = mapped_column(String(20))  # backfill | daily | intraday | metrics | manual
     data_source: Mapped[str] = mapped_column(String(10))  # mock | live
+    environment: Mapped[str] = mapped_column(String(20), default="")  # the Live connection's environment; empty for mock
     status: Mapped[str] = mapped_column(String(15), default="running")  # running | success | failed | skipped
     triggered_by: Mapped[str] = mapped_column(String(20), default="scheduler")
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)

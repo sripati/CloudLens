@@ -7,6 +7,9 @@
 | `img/` | Diagrams and cropped screenshots used in the report |
 | `src/` | Generator: `build_report.js` (content), `make_report.py` (builds Word + PDF with page-numbered contents), `diagrams.html` (architecture and alert-flow diagrams) |
 
+**Out of date:** the Word and PDF report were written before per-cloud Mock and Live modes and don't describe them. See
+[../live-cloud-setup.md](../live-cloud-setup.md) for this feature. Regenerating needs LibreOffice (below).
+
 **Before submitting:** fill in the cover page placeholders `[Student Name]`, `[Number]`, `[Programme name]`,
 `[Institute name]` and `[Mentor name]` (in Word, or in `src/build_report.js` before regenerating).
 

@@ -12,7 +12,7 @@ from app.core.config import get_settings
 from app.core.database import get_db
 from app.models import CostRecord, User
 from app.services import analytics
-from app.services.analytics import DIMENSIONS, Filters, _cost_where
+from app.services.analytics import DIMENSIONS, Filters, _active_cost, _cost_where
 from app.services.ingestion import local_today
 
 router = APIRouter(prefix="/costs", tags=["costs"])
@@ -53,7 +53,7 @@ def monthly(
 def date_bounds(db: Session = Depends(get_db), _: User = Depends(get_current_user)):
     """Dates the date-range picker may offer: data from `min_date`, never after `today` (server timezone)."""
     today = local_today()
-    lo, hi = db.execute(select(func.min(CostRecord.usage_date), func.max(CostRecord.usage_date))).one()
+    lo, hi = db.execute(select(func.min(CostRecord.usage_date), func.max(CostRecord.usage_date)).where(_active_cost())).one()
     return {
         "today": today.isoformat(),
         "min_date": (lo or today).isoformat(),
@@ -72,7 +72,7 @@ def anomalies(threshold_pct: float = Query(40, ge=5, le=500), f: Filters = Depen
 def filter_options(db: Session = Depends(get_db), _: User = Depends(get_current_user)):
     """Distinct values present in the data, used to populate filter dropdowns."""
     def values(col):
-        return sorted(v for (v,) in db.execute(select(col).distinct()).all() if v)
+        return sorted(v for (v,) in db.execute(select(col).where(_active_cost()).distinct()).all() if v)
 
     return {
         "providers": values(CostRecord.provider),

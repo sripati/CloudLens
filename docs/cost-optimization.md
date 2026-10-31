@@ -34,12 +34,12 @@ Thresholds are editable in **Settings → Optimization thresholds**. On the mock
 
 | Area | Design choice | Effect |
 |---|---|---|
-| Cost Explorer API (USD 0.01/request) | Backfill once; daily sync only re-fetches `SYNC_LOOKBACK_DAYS`=3; intraday refresh configurable (360 min recommended live); `api_calls` recorded per sync run | ~2 requests/day ≈ **USD 0.60/month** instead of ~USD 30 for 5-minute polling |
+| Cost Explorer API (USD 0.01/request) | Backfill once; daily sync only re-fetches `SYNC_LOOKBACK_DAYS`=3; today's cost refreshes at most every 360 min per Live connection; `api_calls` recorded per sync run | ~5 requests/day per connection ≈ **USD 1.50/month** instead of ~USD 29 for 15-minute polling |
 | BigQuery (GCP) | Query filters on `_PARTITIONTIME`; `maximum_bytes_billed` = 2 GB guard | Each sync scans only recent partitions, within the free 1 TB/month |
 | Azure Query API | 7-day windows, aggregated server-side (Daily, grouped) | Few calls, no throttling |
 | Compute | Single t3.small for the whole stack; 1 backend worker; in-process scheduler (no Redis/Celery) | ≈ USD 15/month |
 | Storage | Retention: metrics 90 d, costs 730 d, sync logs 60 d; Prometheus retention 15 d; Docker log rotation 10 MB × 3 | Disk stays < 2 GB, so 20 GB gp3 is plenty |
-| Images | Multi-stage frontend (nginx ≈ 50 MB); `python:slim`; optional `INSTALL_CLOUD_SDKS=false` for mock-only | Faster deploys, less EBS and ECR storage |
+| Images | Multi-stage frontend (nginx ≈ 50 MB); `python:slim`| Faster deploys, less EBS and ECR storage |
 | Network | Static assets gzip-compressed and cached for 1 year (hashed filenames) | Low data transfer |
 | Credentials | IAM instance role rather than access keys | No key-rotation overhead, lower risk |
 | Scheduling | `create-ec2.sh` tags the instance; stop it outside demo hours | ≈ 65 % lower compute cost for staging |
@@ -51,7 +51,7 @@ Thresholds are editable in **Settings → Optimization thresholds**. On the mock
 | t3.small on-demand (730 h) | ~15.2 |
 | 20 GB gp3 | ~1.9 |
 | Public IPv4 | ~3.6 |
-| Cost Explorer API | ~0.6 |
+| Cost Explorer API | ~1.5 |
 | BigQuery / Azure APIs | ~0 (free tier) |
 | **Total** | **≈ 21 (₹1,770)** |
 

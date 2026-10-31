@@ -1,12 +1,9 @@
 import { useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { usePrefs } from '../context/PrefsContext';
-import Icon from '../components/Icon';
 
 export default function LoginPage() {
   const { login, user } = useAuth();
-  const { theme, toggleTheme } = usePrefs();
   const navigate = useNavigate();
   const location = useLocation();
   const [email, setEmail] = useState('');
@@ -41,9 +38,6 @@ export default function LoginPage() {
             <div className="brand-name">CloudLens</div>
             <div className="tiny">DevOps cost &amp; resource monitor</div>
           </div>
-          <button type="button" className="btn small" style={{ marginLeft: 'auto' }} onClick={toggleTheme} aria-label="Toggle theme">
-            <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={16} />
-          </button>
         </div>
         <h1 id="login-title" style={{ fontSize: 22, margin: '0 0 4px' }}>Sign in</h1>
         <p className="sub" style={{ marginBottom: 18 }}>Monitor AWS, Azure and GCP spend in one place.</p>

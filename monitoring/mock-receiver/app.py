@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 from typing import Any, Deque, Dict
 
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse
 
 app = FastAPI(title="CloudLens mock Slack/Teams receiver", version="1.0.0")
 INBOX: Deque[Dict[str, Any]] = deque(maxlen=int(os.getenv("MOCK_RECEIVER_MAX", "500")))
@@ -57,7 +57,7 @@ async def _store(channel: str, request: Request):
 @app.post("/slack")
 async def slack(request: Request):
     await _store("slack", request)
-    return "ok"  # Slack returns plain "ok"
+    return PlainTextResponse("ok")  # Slack returns plain text; Alertmanager retries anything else
 
 
 @app.post("/teams")

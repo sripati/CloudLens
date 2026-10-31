@@ -1,6 +1,6 @@
 """Azure connector.
 
-* Costs     : Cost Management Query API (ActualCost, Daily, grouped by ServiceName, ResourceLocation, env tag)
+* Costs     : Cost Management Query API (ActualCost, Daily, grouped by ServiceName and ResourceLocation)
 * Inventory : Resource Management `resources.list` (VMs, AKS, SQL, Storage, gateways)
 * Metrics   : Azure Monitor metrics ("Percentage CPU" for VMs, "node_cpu_usage_percentage" for AKS,
               "cpu_percent" for SQL databases)
@@ -10,10 +10,9 @@ Authentication: service principal (AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIEN
 """
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
-from app.core.config import get_settings
 from app.services.normalizer import classify_service, normalize_environment, normalize_region, to_usd
 from app.services.providers.base import CloudProvider, CostItem, MetricItem, ProviderNotConfigured, ResourceItem
 
@@ -78,15 +77,29 @@ class AzureProvider(CloudProvider):
     name = "azure"
     display_name = "Microsoft Azure"
 
-    def __init__(self, inr_rate: float = 84.2):
+    def __init__(self, inr_rate: float = 84.2, config: Optional[Dict[str, str]] = None):
         super().__init__()
-        self.s = get_settings()
+        self.c = config or {}
+        self.environment = self.c.get("environment", "")
         self.inr_rate = inr_rate
         self._cred = None
 
     def is_configured(self) -> bool:
-        s = self.s
-        return all([s.AZURE_TENANT_ID, s.AZURE_CLIENT_ID, s.AZURE_CLIENT_SECRET, s.AZURE_SUBSCRIPTION_ID])
+        c = self.c
+        return all([c.get("tenant_id"), c.get("client_id"), c.get("client_secret"), c.get("subscription_id")])
+
+    def secret_values(self) -> List[str]:
+        return [self.c.get("client_secret", "")]
+
+    def hint(self, exc: Exception) -> str:
+        message = str(exc)
+        if type(exc).__name__ == "ClientAuthenticationError" or "ClientSecretCredential.get_token failed" in message:
+            return "Azure rejected this service principal. Check the tenant ID, client ID and client secret."
+        if "AuthorizationFailed" in message or "does not have authorization" in message or "RBACAccessDenied" in message:
+            return "The service principal lacks a role. Grant Cost Management Reader, Monitoring Reader and Reader on the subscription."
+        if "SubscriptionNotFound" in message or "InvalidSubscriptionId" in message:
+            return "Azure cannot find this subscription. Check the subscription ID."
+        return ""
 
     def credential(self):
         if not self.is_configured():
@@ -94,15 +107,15 @@ class AzureProvider(CloudProvider):
         if self._cred is None:
             from azure.identity import ClientSecretCredential
 
-            self._cred = ClientSecretCredential(self.s.AZURE_TENANT_ID, self.s.AZURE_CLIENT_ID, self.s.AZURE_CLIENT_SECRET)
+            self._cred = ClientSecretCredential(self.c["tenant_id"], self.c["client_id"], self.c["client_secret"])
         return self._cred
 
     def account_id(self) -> str:
-        return self.s.AZURE_SUBSCRIPTION_ID
+        return self.c["subscription_id"]
 
     @property
     def scope(self) -> str:
-        return f"/subscriptions/{self.s.AZURE_SUBSCRIPTION_ID}"
+        return f"/subscriptions/{self.c['subscription_id']}"
 
     def fetch_costs(self, start: date, end: date) -> List[CostItem]:
         from azure.mgmt.costmanagement import CostManagementClient
@@ -135,7 +148,6 @@ class AzureProvider(CloudProvider):
                     grouping=[
                         QueryGrouping(type="Dimension", name="ServiceName"),
                         QueryGrouping(type="Dimension", name="ResourceLocation"),
-                        QueryGrouping(type="TagKey", name=self.s.ENV_TAG_KEY),
                     ],
                 ),
             )
@@ -144,12 +156,14 @@ class AzureProvider(CloudProvider):
             result = {"columns": [{"name": c.name} for c in res.columns], "rows": list(res.rows)}
             items.extend(parse_cost_query(result, self.account_id(), self.inr_rate))
             window_start = window_end
+        for item in items:
+            item.environment = self.environment
         return _merge_duplicates(items)
 
     def fetch_resources(self) -> List[ResourceItem]:
         from azure.mgmt.resource import ResourceManagementClient
 
-        client = ResourceManagementClient(self.credential(), self.s.AZURE_SUBSCRIPTION_ID)
+        client = ResourceManagementClient(self.credential(), self.c["subscription_id"])
         out: List[ResourceItem] = []
         self.api_calls += 1
         for res in client.resources.list():
@@ -166,7 +180,7 @@ class AzureProvider(CloudProvider):
                     name=res.name,
                     resource_type=norm,
                     service=service,
-                    environment=normalize_environment(tags.get(self.s.ENV_TAG_KEY)),
+                    environment=self.environment,
                     region=normalize_region(res.location),
                     sku=(res.sku.name if getattr(res, "sku", None) else "") or "",
                     status="running",
@@ -178,7 +192,7 @@ class AzureProvider(CloudProvider):
     def fetch_metrics(self, resources: List[ResourceItem], start: datetime, end: datetime, step_minutes: int = 60) -> List[MetricItem]:
         from azure.mgmt.monitor import MonitorManagementClient
 
-        client = MonitorManagementClient(self.credential(), self.s.AZURE_SUBSCRIPTION_ID)
+        client = MonitorManagementClient(self.credential(), self.c["subscription_id"])
         interval = "PT1H" if step_minutes >= 60 else "PT5M"
         timespan = f"{start.strftime('%Y-%m-%dT%H:%M:%SZ')}/{end.strftime('%Y-%m-%dT%H:%M:%SZ')}"
         out: List[MetricItem] = []
@@ -199,12 +213,38 @@ class AzureProvider(CloudProvider):
                             out.append(MetricItem(provider="azure", resource_id=r.resource_id, ts=point.time_stamp, cpu_percent=round(point.average, 2)))
         return out
 
+    def _cost_query_one_day(self):
+        from azure.mgmt.costmanagement import CostManagementClient
+        from azure.mgmt.costmanagement.models import GranularityType, QueryAggregation, QueryDataset, QueryDefinition, QueryTimePeriod
+
+        day = datetime.now(timezone.utc).date() - timedelta(days=1)
+        query = QueryDefinition(
+            type="ActualCost",
+            timeframe="Custom",
+            time_period=QueryTimePeriod(from_property=datetime.combine(day, datetime.min.time()), to=datetime.combine(day, datetime.max.time().replace(microsecond=0))),
+            dataset=QueryDataset(granularity=GranularityType.DAILY, aggregation={"totalCost": QueryAggregation(name="Cost", function="Sum")}),
+        )
+        self.api_calls += 1
+        return CostManagementClient(self.credential()).query.usage(scope=self.scope, parameters=query)
+
     def test_connection(self) -> Dict[str, object]:
         if not self.is_configured():
-            return {"ok": False, "message": "Azure service principal not set in .env"}
-        try:
-            self.credential().get_token("https://management.azure.com/.default")
+            return {"ok": False, "message": "Azure service principal not set"}
+
+        def sign_in() -> str:
             self.api_calls += 1
-            return {"ok": True, "message": "Azure token acquired", "account": self.account_id()}
-        except Exception as exc:
-            return {"ok": False, "message": f"{type(exc).__name__}: {exc}"}
+            self.credential().get_token("https://management.azure.com/.default")
+            return "Service principal accepted"
+
+        def costs() -> str:
+            self._cost_query_one_day()
+            return "Cost data is readable"
+
+        def inventory() -> str:
+            from azure.mgmt.resource import ResourceManagementClient
+
+            self.api_calls += 1
+            next(iter(ResourceManagementClient(self.credential(), self.c["subscription_id"]).resources.list()), None)
+            return "Resources readable"
+
+        return self.run_checks([("Sign in (Entra ID)", sign_in), ("Cost Management", costs), ("Resource inventory", inventory)])

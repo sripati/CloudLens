@@ -10,8 +10,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-ARG INSTALL_CLOUD_SDKS=true
-
 # Core dependencies (small). The pip cache mount keeps already-downloaded wheels between
 # builds, so a network hiccup only re-downloads what is missing on the next attempt.
 COPY requirements.txt ./
@@ -20,15 +18,16 @@ RUN --mount=type=cache,target=/root/.cache/pip \
  && pip install -r requirements.txt
 
 # Cloud SDKs (large: boto3, Azure, Google) in a separate layer, so a failure here
-# does not throw away the core layer. Skip with INSTALL_CLOUD_SDKS=false in .env (mock mode).
+# does not throw away the core layer.
 COPY requirements-cloud.txt ./
 RUN --mount=type=cache,target=/root/.cache/pip \
-    if [ "$INSTALL_CLOUD_SDKS" = "true" ]; then pip install -r requirements-cloud.txt; fi
+    pip install -r requirements-cloud.txt
 
 COPY app ./app
 
 # run as an unprivileged user
-RUN useradd --create-home --uid 10001 cloudlens
+RUN useradd --create-home --uid 10001 cloudlens \
+ && mkdir /shared && chown cloudlens /shared  # volume shared with Alertmanager
 USER cloudlens
 
 EXPOSE 8000

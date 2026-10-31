@@ -8,7 +8,6 @@ import os
 os.environ["DATABASE_URL"] = os.getenv("TEST_DATABASE_URL", "sqlite:///:memory:")
 os.environ.update({
     "SCHEDULER_ENABLED": "false",
-    "DATA_SOURCE": "mock",
     "ALERT_DELIVERY": "direct",
     "BACKFILL_DAYS": "60",
     "ALERTMANAGER_WEBHOOK_TOKEN": "test-token",
@@ -18,14 +17,8 @@ os.environ.update({
     "ADMIN_PASSWORD": "Admin@123",
     "VIEWER_EMAIL": "viewer@test.dev",
     "VIEWER_PASSWORD": "Viewer@123",
-    "AWS_USE_DEFAULT_CREDENTIALS": "false",
     "JWT_SECRET": "test-secret-key-with-at-least-32-bytes!!",
 })
-
-# make sure real credentials from the developer machine never leak into tests
-for _var in ("AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN", "AWS_PROFILE",
-             "AZURE_CLIENT_SECRET", "AZURE_CLIENT_ID", "AZURE_TENANT_ID", "GOOGLE_APPLICATION_CREDENTIALS"):
-    os.environ.pop(_var, None)
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
@@ -41,7 +34,7 @@ def fake_notifier(monkeypatch):
     """Capture notifications instead of calling real webhooks."""
     SENT.clear()
 
-    def fake_send(channels, title, message, severity, status, fields):
+    def fake_send(channels, title, message, severity, status, fields, urls):
         SENT.append({"channels": channels, "title": title, "severity": severity, "status": status})
         return ("sent", "") if channels else ("skipped", "no channel selected")
 

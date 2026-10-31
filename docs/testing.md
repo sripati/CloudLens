@@ -25,17 +25,21 @@ pytest --cov=app --cov-report=term          # coverage
 cd ../frontend && npm test                  # vitest
 ```
 
-The test configuration (`tests/conftest.py`) forces `DATA_SOURCE=mock`, disables the scheduler, removes any
-real cloud credentials from the environment, and replaces the notifier with a recorder.
+`tests/test_cloud_accounts.py` covers per-cloud modes, per-environment connections, the configuration API, encryption, webhooks and the
+connection checks, with the cloud APIs stubbed. The test configuration (`tests/conftest.py`) disables the scheduler and replaces the
+notifier with a recorder.
 
 ## 3. Results
 
 | Suite | Tests | Result |
 |---|---|---|
-| Backend on SQLite | 84 | **84 passed** |
-| Backend on PostgreSQL 16 | 84 | **84 passed** |
-| Backend with pinned `requirements*.txt` in a clean virtualenv | 84 | **84 passed** |
-| Frontend (vitest) | 31 | **31 passed** |
+| Backend on SQLite | 144 | **144 passed** |
+| Backend on PostgreSQL 16 | 144 | **144 passed** |
+| Backend with pinned `requirements*.txt` in a clean container | 144 | **144 passed** |
+| Frontend (vitest) | 44 | **44 passed** |
+| Browser journey on `docker-compose.yml` with PostgreSQL 16, upgraded from the previous build, against two simulated AWS accounts (moto) | 50 checks | **50 passed** |
+| Browser check of every screen as Administrator and Viewer, and on a phone: user bar, Settings-only theme and currency, Environment list, Reports filters, CSV and print | 81 checks | **81 passed** |
+| Real Alertmanager: normal path, direct-to-Slack path, and a URL saved in Settings picked up with no restart | 3 checks | **3 passed** |
 | Frontend production build | — | success (no warnings) |
 | promtool check rules / config | 5 rules | SUCCESS |
 | amtool check-config | — | SUCCESS |
@@ -84,8 +88,8 @@ SDK calls that need real cloud accounts and are verified with **Cloud Accounts �
 |---|---|---|---|
 | UI-01 | Login failure | Wrong password | Inline error, stays on login |
 | UI-02 | Role restriction | Sign in as viewer | No Cloud Accounts / Users in menu; no Sync now / New rule; Settings read-only; direct URL `/users` redirects |
-| UI-03 | Theme toggle | Click *Light mode* | All screens switch theme; choice persists after reload |
-| UI-04 | Currency | Click *INR ₹* | Amounts in ₹ with K/L/Cr; footer shows the rate |
+| UI-03 | Theme | Settings → *Theme* → *Light* | All screens switch theme; choice persists after reload |
+| UI-04 | Currency | Settings → *Display currency* → *INR ₹* | Amounts on every screen in ₹ with K/L/Cr; footer shows the rate |
 | UI-05 | Provider filter | Select AWS | KPIs, trend (AWS line only), donut, tables limited to AWS; budget switches to the AWS budget |
 | UI-06 | Environment filter | Select Production | Totals drop; budget note says it applies to provider scope |
 | UI-07 | Custom range | Date button → click a start day, click an end day → Apply | Charts, KPIs and subtitles cover exactly that range; button shows *Custom range* with dates and day count |
@@ -113,3 +117,15 @@ SDK calls that need real cloud accounts and are verified with **Cloud Accounts �
 
 On the mock dataset (about 6k cost rows, 25 resources), `/dashboard/overview` responds in under 150 ms and a full
 180-day backfill of 3 providers completes in about 3 s on PostgreSQL.
+
+## Mock and Live modes: what has and has not been tested
+
+| Path | Tested against |
+|---|---|
+| Form, Environment selection on each screen, blocked duplicate account, save rules, mode switching, mixed totals | Real browser, PostgreSQL, two simulated AWS accounts (moto) |
+| Upgrade of an existing database | The previous build's image, then this one, with data kept |
+| Rejected AWS keys | The real AWS sign-in service, with a made-up key (run on the previous build; the sign-in code is unchanged) |
+| Rejected Azure sign-in | Real Microsoft sign-in, with a made-up tenant |
+| Azure and GCP connection checks after sign-in, and all GCP calls | Unit tests only; **not run against a real account** |
+| AWS against a real account with real billing data, including the `LINKED_ACCOUNT` filter (the simulator ignores it) | **Not run yet:** needs your credentials |
+| Delivery to a real Slack or Teams workspace | **Not run:** needs your webhook URLs |

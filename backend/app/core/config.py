@@ -8,7 +8,6 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import List
 
-from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -39,43 +38,19 @@ class Settings(BaseSettings):
     VIEWER_PASSWORD: str = "Viewer@123"
     VIEWER_NAME: str = "Read-only Viewer"
 
-    # ---- Data source switch -------------------------------------------
-    # mock -> built-in deterministic data generator (no cloud credentials needed)
-    # live -> real AWS / Azure / GCP APIs using the credentials below
-    DATA_SOURCE: str = "mock"
+    # ---- Data ---------------------------------------------------------
+    # Every cloud starts in Mock mode. Live connections are set up on the Cloud Accounts screen and
+    # stored in the database, so nothing about them belongs in this file or in .env.
     ENABLED_PROVIDERS: str = "aws,azure,gcp"
-    ENV_TAG_KEY: str = "environment"  # tag/label key that holds production/staging/development
     BACKFILL_DAYS: int = 365  # history loaded on first start (missing older days are added on restart)
     SYNC_LOOKBACK_DAYS: int = 3  # days re-fetched on each daily sync (providers restate recent costs)
-
-    # ---- AWS -----------------------------------------------------------
-    AWS_ACCESS_KEY_ID: str = ""
-    AWS_SECRET_ACCESS_KEY: str = ""
-    AWS_SESSION_TOKEN: str = ""
-    AWS_PROFILE: str = ""
-    # true -> use the default boto3 credential chain (EC2 instance role / ECS task role); recommended on EC2
-    AWS_USE_DEFAULT_CREDENTIALS: bool = False
-    AWS_REGIONS: str = "ap-south-1"
-    AWS_COST_EXPLORER_REGION: str = "us-east-1"
-
-    # ---- Azure ---------------------------------------------------------
-    AZURE_TENANT_ID: str = ""
-    AZURE_CLIENT_ID: str = ""
-    AZURE_CLIENT_SECRET: str = ""
-    AZURE_SUBSCRIPTION_ID: str = ""
-
-    # ---- GCP -----------------------------------------------------------
-    GOOGLE_APPLICATION_CREDENTIALS: str = ""
-    GCP_PROJECT_ID: str = ""
-    GCP_BILLING_ACCOUNT_ID: str = ""
-    GCP_BILLING_EXPORT_TABLE: str = ""  # project.dataset.gcp_billing_export_v1_XXXX
 
     # ---- Scheduler -----------------------------------------------------
     SCHEDULER_ENABLED: bool = True
     DAILY_SYNC_HOUR: int = 2
     DAILY_SYNC_MINUTE: int = 0
     METRICS_INTERVAL_MINUTES: int = 5
-    INTRADAY_COST_REFRESH_MINUTES: int = 15  # use 360+ in live mode (AWS charges per Cost Explorer request)
+    INTRADAY_COST_REFRESH_MINUTES: int = 15
     ALERT_EVAL_INTERVAL_SECONDS: int = 60
     METRICS_RETENTION_DAYS: int = 90
     COST_RETENTION_DAYS: int = 730
@@ -87,22 +62,16 @@ class Settings(BaseSettings):
     ALERTMANAGER_WEBHOOK_TOKEN: str = "change-me-webhook-token"
     ALERTMANAGER_URL: str = "http://alertmanager:9093"
     PROMETHEUS_URL: str = "http://prometheus:9090"
+    # bundled test inbox, used until real webhook URLs are saved on the Settings screen
     SLACK_WEBHOOK_URL: str = "http://mock-receiver:9000/slack"
     TEAMS_WEBHOOK_URL: str = "http://mock-receiver:9000/teams"
+    ALERTMANAGER_SHARED_DIR: str = "/shared"  # volume where the backend leaves the Slack URL for Alertmanager
     DEFAULT_NOTIFICATION_CHANNEL: str = "both"  # slack | teams | both
     DASHBOARD_PUBLIC_URL: str = "http://localhost:8080"
 
     # ---- Business defaults (editable later in Settings screen) ---------
     DEFAULT_MONTHLY_BUDGET_USD: float = 120000.0
     DEFAULT_EXCHANGE_RATE_INR: float = 84.20
-
-    @field_validator("DATA_SOURCE")
-    @classmethod
-    def _check_source(cls, v: str) -> str:
-        v = v.lower().strip()
-        if v not in {"mock", "live"}:
-            raise ValueError("DATA_SOURCE must be 'mock' or 'live'")
-        return v
 
     @property
     def enabled_providers(self) -> List[str]:
@@ -111,10 +80,6 @@ class Settings(BaseSettings):
     @property
     def cors_origins(self) -> List[str]:
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
-
-    @property
-    def aws_regions(self) -> List[str]:
-        return [r.strip() for r in self.AWS_REGIONS.split(",") if r.strip()]
 
 
 @lru_cache

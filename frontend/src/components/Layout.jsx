@@ -4,7 +4,7 @@ import { usePrefs } from '../context/PrefsContext';
 import { useApi } from '../hooks/useApi';
 import Icon from './Icon';
 import { Badge } from './ui';
-import { PROVIDER_LABEL } from '../utils/constants';
+import { MODE_LABEL, PROVIDER_LABEL } from '../utils/constants';
 import { useEffect } from 'react';
 
 const NAV = [
@@ -17,6 +17,30 @@ const NAV = [
   { to: '/users', label: 'Users & Roles', icon: 'users', admin: true },
   { to: '/settings', label: 'Settings', icon: 'settings' },
 ];
+
+function UserBar() {
+  const { user, logout, isAdmin } = useAuth();
+  const initials = (user?.full_name || user?.email || '?')
+    .split(/[\s@.]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((s) => s[0].toUpperCase())
+    .join('');
+  return (
+    <div className="topbar">
+      <div className="user-chip">
+        <span className="avatar" aria-hidden="true">{initials}</span>
+        <span style={{ display: 'flex', flexDirection: 'column' }}>
+          <span style={{ fontWeight: 600 }}>{user?.full_name || user?.email}</span>
+          <span className="tiny">{isAdmin ? 'Administrator' : 'Viewer'}</span>
+        </span>
+        <button type="button" className="btn small" onClick={logout}>
+          <Icon name="logout" size={16} /> Logout
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function Layout() {
   const { isAdmin } = useAuth();
@@ -65,15 +89,15 @@ export default function Layout() {
                 <span className="dot" style={{ borderRadius: 999, width: 8, height: 8, background: ok ? 'var(--ok)' : st === 'failed' ? 'var(--crit)' : 'var(--warn)' }} />
                 <span>{PROVIDER_LABEL[p.provider]}</span>
                 <span style={{ marginLeft: 'auto' }}>
-                  <Badge kind={status.data_source === 'mock' ? 'info' : ok ? 'ok' : 'warning'}>{status.data_source === 'mock' ? 'Mock' : p.configured ? 'Live' : 'Not set'}</Badge>
+                  <Badge kind={p.mode === 'mock' ? 'info' : ok ? 'ok' : 'warning'}>{p.mode === 'mock' || p.configured ? MODE_LABEL[p.mode] : 'Not set'}</Badge>
                 </span>
               </div>
             );
           })}
-          {status && <div className="tiny mono" style={{ marginTop: 14 }}>DATA_SOURCE={status.data_source}</div>}
         </div>
       </aside>
       <main id="main" className="main">
+        <UserBar />
         <Outlet />
       </main>
     </div>

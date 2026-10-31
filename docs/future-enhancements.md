@@ -10,6 +10,10 @@ Ordered roughly by value versus effort. Each item names the files you would touc
 | **HTTPS** | Caddy container in front of `frontend`, or an AWS ALB + ACM. Update `DASHBOARD_PUBLIC_URL` and `CORS_ORIGINS`. |
 | **Live exchange rate** | Daily job fetching USD→INR (for example the RBI reference rate) into `app_settings.exchange_rate_inr`; keep the manual override. |
 | **Per-team budgets** | New `budgets` table (scope: provider, environment, tag), so rules can reference a budget by id. Touches `settings_service.budget_for`, Settings screen. |
+| **Mark deleted resources** | Inventory only adds and updates. Use `resources.last_seen_at` to hide or flag resources no longer returned, which matters on Live. |
+| **Separate budgets per mode** | Live and Mock share one budget and alert thresholds. Touches `settings_service`, Settings screen. |
+| **AWS AssumeRole** | Add a Role ARN field to the AWS connection form, to avoid long-lived keys. |
+| **Audit log for configuration changes** | Record who changed a mode or credentials. |
 | **Resource-level AWS costs** | Enable Cost Explorer *hourly and resource-level data* (extra charge) or read the CUR in Athena; add `RESOURCE_ID` grouping in `aws.py`. |
 | **More AWS inventory** | EKS node groups, Lambda, S3 bucket metrics (`aws.py → fetch_resources`). |
 | **Alert silencing from the UI** | Call the Alertmanager API `/api/v2/silences` from a new endpoint; add a "Snooze 24h" button in the Alerts screen. |

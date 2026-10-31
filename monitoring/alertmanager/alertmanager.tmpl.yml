@@ -1,5 +1,6 @@
-# Rendered at container start: __WEBHOOK_TOKEN__ and __SLACK_WEBHOOK_URL__ are replaced with
-# values from .env (see the alertmanager service in docker-compose.yml).
+# Rendered at container start: __WEBHOOK_TOKEN__ is replaced with the value from .env (see the
+# alertmanager service in docker-compose.yml). The Slack URL comes from a file the backend writes
+# whenever it is saved on the Settings screen.
 global:
   resolve_timeout: 5m
 
@@ -28,7 +29,7 @@ receivers:
 
   - name: infra-direct
     slack_configs:
-      - api_url: __SLACK_WEBHOOK_URL__
+      - api_url_file: /shared/slack_webhook_url
         send_resolved: true
         title: "{{ .CommonAnnotations.summary }}"
         text: "{{ .CommonAnnotations.description }}"

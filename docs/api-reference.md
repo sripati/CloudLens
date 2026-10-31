@@ -13,7 +13,7 @@ Accepted by dashboard, costs, resources and recommendations endpoints:
 | `days` | `30` | Range of N days ending at `end` (default 30); used only when `start` is not given |
 | `start`, `end` | `2026-09-01`, `2026-09-30` | Inclusive. `end` defaults to today. Validated (422 with a readable message): neither date in the future, `start` ≤ `end`, at most **731 days** |
 | `provider` | `aws,gcp` | Comma separated; `all` or empty = no filter |
-| `environment` | `production` | production, staging, development, unassigned |
+| `environment` | `production` | production, staging, development, unassigned (the screens offer only the first three) |
 | `resource_type` | `compute,database` | compute, containers, database, storage, networking, other |
 | `service`, `region` | `BigQuery` | Exact match, comma separated |
 
@@ -95,21 +95,33 @@ Rule body:
 
 | Method | Path | Description |
 |---|---|---|
-| GET | `/sync/status` | Data source, per-provider configuration and last run, scheduled jobs |
+| GET | `/sync/status` | Overall `data_source` (`mock`, `live` or `mixed`), each provider's `mode`, `connections` (environment, account, verified, last run) and last run, scheduled jobs |
 | GET | `/sync/runs?limit=50` | Sync history |
 | POST 🔒 | `/sync/run` | `{job: manual/daily/intraday/metrics/backfill, providers?}` → 202, runs in background |
-| POST 🔒 | `/sync/test/{provider}` | Credential and connectivity check |
-| POST 🔒 | `/sync/mock/anomaly` | Mock mode only: `{provider, factor, days_ago}` injects a cost spike |
+| POST 🔒 | `/sync/test/{provider}` | Re-tests every saved connection of the cloud |
+| POST 🔒 | `/sync/mock/anomaly` | Clouds in Mock mode only: `{provider, factor, days_ago}` injects a cost spike |
 | DELETE 🔒 | `/sync/mock/anomaly` | Clear injected spikes |
+
+## Cloud accounts
+
+All admin only. `provider` is `aws`, `azure` or `gcp`. `environment` is `production`, `staging` or `development`. Secret values are never returned.
+
+| Method | Path | Description |
+|---|---|---|
+| GET 🔒 | `/cloud-accounts/{provider}?environment=` | Mode, saved connections, form fields, non-secret values, which secrets are set, validation state, prerequisites, cost note |
+| POST 🔒 | `/cloud-accounts/{provider}/test` | `{environment, config}`: checks formats (422 per field), then calls the cloud. Returns `{ok, message, account, checks[], api_calls}`. Fails if another environment uses the account. Saves nothing. A blank secret means "use the saved one" |
+| PUT 🔒 | `/cloud-accounts/{provider}/config` | `{environment, config, activate}`: saves values that passed a test; 409 otherwise, or if the account is in use. `activate: true` also switches to Live |
+| PUT 🔒 | `/cloud-accounts/{provider}/mode` | `{mode: mock or live}`. `live` needs at least one validated connection, otherwise 409. Starts a background data load |
+| DELETE 🔒 | `/cloud-accounts/{provider}/config?environment=` | Forgets that connection, and its figures stop showing. Removing the last one returns the cloud to Mock. Collected data is kept |
 
 ## Settings & reports
 
 | Method | Path | Description |
 |---|---|---|
 | GET | `/settings` | Budgets, exchange rate, channel, thresholds + read-only `system` block |
-| PUT 🔒 | `/settings` | Partial update |
-| GET | `/reports/summary?start=&end=` | Report for **any range** (e.g. last 6 months): total, daily average, previous period of equal length (`complete` = data exists for all of it), budget pro-rated to the days in the range, **monthly breakdown** (per provider, budget %, change), breakdowns, top services/resources, anomalies, recommendations |
-| GET | `/reports/summary.csv?start=&end=` | Same as CSV, file `cloudlens_report_<start>_to_<end>.csv` |
+| PUT 🔒 | `/settings` | Partial update. `slack_webhook_url` and `teams_webhook_url` must start with `https://`; omit to keep, `""` returns to the test inbox. Never returned; `system.webhooks` reports only whether each is saved |
+| GET | `/reports/summary?start=&end=&provider=&environment=&resource_type=` | Report for **any range**, narrowed by the filters; the budget is the selected cloud's own (`budget_scope`), and `budget_applies_to_filtered_view` is false when environment or type narrows the cost further (e.g. last 6 months): total, daily average, previous period of equal length (`complete` = data exists for all of it), budget pro-rated to the days in the range, **monthly breakdown** (per provider, budget %, change), breakdowns, top services/resources, anomalies, recommendations |
+| GET | `/reports/summary.csv?start=&end=&provider=&environment=&resource_type=` | Same as CSV, with a *Filters* row, file `cloudlens_report_<start>_to_<end>.csv` |
 | GET | `/reports/monthly?month=YYYY-MM` | Shortcut: the summary for one calendar month (a future month returns 422) |
 | GET | `/reports/monthly.csv?month=YYYY-MM` | Same as CSV |
 
@@ -117,7 +129,7 @@ Rule body:
 
 | Method | Path | Description |
 |---|---|---|
-| GET | `/health` | `{status, database, data_source, version}`; 503 if the DB is down |
+| GET | `/health` | `{status, database, data_source, version}` (`data_source`: `mock`, `live` or `mixed`); 503 if the DB is down |
 | GET | `/metrics` | Prometheus exposition format |
 
 ### Prometheus metrics

@@ -92,16 +92,16 @@ def test_monthly_trend_has_mom(db):
 
 def test_anomalies_detect_injected_spike(db):
     from app.services import settings_service
-    from app.services.providers import get_provider
+    from app.services.providers import connectors_for
 
     day = local_today() - timedelta(days=2)
     settings_service.set_value(db, "mock_anomalies", [{"provider": "gcp", "date": day.isoformat(), "factor": 4}])
-    sync_provider(db, "gcp", get_provider("gcp", db), job="manual", cost_start=day, cost_end=day + timedelta(days=1), triggered_by="test")
+    sync_provider(db, "gcp", connectors_for("gcp", db)[0], job="manual", cost_start=day, cost_end=day + timedelta(days=1), triggered_by="test")
     found = [a for a in analytics.anomalies(db, _f(10)) if a["provider"] == "gcp" and a["date"] == day.isoformat()]
     assert found and found[0]["change_pct"] > 40
     # clean up so other tests see normal data
     settings_service.set_value(db, "mock_anomalies", [])
-    sync_provider(db, "gcp", get_provider("gcp", db), job="manual", cost_start=day, cost_end=day + timedelta(days=1), triggered_by="test")
+    sync_provider(db, "gcp", connectors_for("gcp", db)[0], job="manual", cost_start=day, cost_end=day + timedelta(days=1), triggered_by="test")
 
 
 def test_resources_status_and_recommendations(db):

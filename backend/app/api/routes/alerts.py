@@ -95,7 +95,7 @@ def acknowledge(event_id: int, _: User = Depends(get_current_user), db: Session 
 def test_notification(body: TestNotification, _: User = Depends(require_admin), db: Session = Depends(get_db)):
     channels = notifier.resolve_channels(body.channel, settings_service.get_value(db, "notification_channel"))
     now = datetime.now(timezone.utc)
-    status_sent, err = notifier.send(channels, "Test notification", body.message, "info", "firing", {"Sent by": "CloudLens admin", "Time": now.strftime("%Y-%m-%d %H:%M UTC")})
+    status_sent, err = notifier.send(channels, "Test notification", body.message, "info", "firing", {"Sent by": "CloudLens admin", "Time": now.strftime("%Y-%m-%d %H:%M UTC")}, settings_service.webhook_urls(db))
     ev = AlertEvent(
         fingerprint=f"test-{now.timestamp():.0f}", status="firing", severity="info", title="Test notification", message=body.message,
         source="test", starts_at=now, notified_channels=",".join(channels), notification_status=status_sent, notification_error=err, labels={},

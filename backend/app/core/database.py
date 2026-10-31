@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Generator
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.core.config import get_settings
@@ -51,3 +51,19 @@ def init_db() -> None:
     from app import models  # noqa: F401  (register models)
 
     Base.metadata.create_all(bind=engine)
+    add_missing_columns(engine)
+
+
+def add_missing_columns(bind) -> None:
+    """create_all never alters existing tables, so schema changes after the first release go here."""
+    resources = {c["name"] for c in inspect(bind).get_columns("resources")}
+    sync_runs = {c["name"] for c in inspect(bind).get_columns("sync_runs")}
+    accounts = {c["name"] for c in inspect(bind).get_columns("cloud_accounts")} if inspect(bind).has_table("cloud_accounts") else set()
+    with bind.begin() as conn:
+        if "source" not in resources:  # everything collected before modes existed is mock data
+            conn.execute(text("ALTER TABLE resources ADD COLUMN source VARCHAR(10) NOT NULL DEFAULT 'mock'"))
+        if "environment" not in sync_runs:
+            conn.execute(text("ALTER TABLE sync_runs ADD COLUMN environment VARCHAR(20) NOT NULL DEFAULT ''"))
+        # connection settings moved to cloud_connections, one row per environment
+        for column in sorted(accounts - {"provider", "mode", "updated_at"}):
+            conn.execute(text(f"ALTER TABLE cloud_accounts DROP COLUMN {column}"))

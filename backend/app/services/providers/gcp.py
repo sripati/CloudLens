@@ -8,14 +8,14 @@
 * Inventory + metrics : Cloud Monitoring `compute.googleapis.com/instance/cpu/utilization`
               (one call returns both the instance list and its CPU series)
 
-Authentication: service-account JSON key via GOOGLE_APPLICATION_CREDENTIALS with roles
+Authentication: service-account JSON key saved on the Cloud Accounts screen, with roles
 "BigQuery Data Viewer", "BigQuery Job User", "Monitoring Viewer" and "Billing Account Viewer".
 """
 from __future__ import annotations
 
-import os
+import json
 from datetime import date, datetime, timedelta, timezone
-from typing import Any, Dict, Iterable, List
+from typing import Any, Dict, Iterable, List, Optional
 
 from app.core.config import get_settings
 from app.services.normalizer import classify_service, normalize_environment, normalize_region, to_usd
@@ -27,7 +27,6 @@ SELECT
   project.id AS project_id,
   service.description AS service,
   IFNULL(location.region, 'global') AS region,
-  (SELECT value FROM UNNEST(labels) WHERE key = @env_key LIMIT 1) AS env,
   currency,
   ANY_VALUE(currency_conversion_rate) AS conversion_rate,
   SUM(cost) + SUM(IFNULL((SELECT SUM(c.amount) FROM UNNEST(credits) c), 0)) AS net_cost,
@@ -37,7 +36,8 @@ FROM `{table}`
 WHERE _PARTITIONTIME >= TIMESTAMP(DATE_SUB(@start, INTERVAL 1 DAY))
   AND DATE(usage_start_time, @tz) >= @start
   AND DATE(usage_start_time, @tz) < @end
-GROUP BY usage_date, project_id, service, region, env, currency
+  AND project.id = @project
+GROUP BY usage_date, project_id, service, region, currency
 """
 
 
@@ -77,45 +77,74 @@ class GCPProvider(CloudProvider):
     name = "gcp"
     display_name = "Google Cloud"
 
-    def __init__(self, inr_rate: float = 84.2):
+    def __init__(self, inr_rate: float = 84.2, config: Optional[Dict[str, str]] = None):
         super().__init__()
         self.s = get_settings()
+        self.c = config or {}
+        self.environment = self.c.get("environment", "")
         self.inr_rate = inr_rate
+        self._creds = None
 
     def is_configured(self) -> bool:
-        creds = self.s.GOOGLE_APPLICATION_CREDENTIALS
-        return bool(self.s.GCP_PROJECT_ID and self.s.GCP_BILLING_EXPORT_TABLE and creds and os.path.exists(creds))
+        return bool(self.c.get("project_id") and self.c.get("billing_export_table") and self.c.get("service_account_json"))
 
     def _check(self) -> None:
         if not self.is_configured():
-            raise ProviderNotConfigured("GCP not configured (GOOGLE_APPLICATION_CREDENTIALS, GCP_PROJECT_ID, GCP_BILLING_EXPORT_TABLE)")
+            raise ProviderNotConfigured("GCP not configured (service account key, project ID, billing export table)")
+
+    def credentials(self):
+        self._check()
+        if self._creds is None:
+            from google.oauth2 import service_account
+
+            scopes = ["https://www.googleapis.com/auth/cloud-platform"]
+            self._creds = service_account.Credentials.from_service_account_info(json.loads(self.c["service_account_json"]), scopes=scopes)
+        return self._creds
+
+    def secret_values(self) -> List[str]:
+        return [self.c.get("service_account_json", "")]
+
+    def hint(self, exc: Exception) -> str:
+        message = str(exc)
+        if "invalid_grant" in message or "Invalid JWT" in message:
+            return "Google rejected this service account key. Create a new key and paste it again."
+        if "has not been used" in message or "SERVICE_DISABLED" in message:
+            return "This API is not enabled on the project. Enable BigQuery, Cloud Monitoring and Cloud Billing."
+        if "403" in message or "PermissionDenied" in type(exc).__name__ or "Forbidden" in type(exc).__name__:
+            return "The service account lacks a role. Grant BigQuery Data Viewer, BigQuery Job User, Monitoring Viewer and Billing Account Viewer."
+        if "404" in message or "NotFound" in type(exc).__name__:
+            return "Not found. Check the project ID and the billing export table name."
+        return ""
 
     def account_id(self) -> str:
-        return self.s.GCP_PROJECT_ID
+        return self.c["project_id"]
 
     def fetch_costs(self, start: date, end: date) -> List[CostItem]:
         self._check()
         from google.cloud import bigquery
 
-        client = bigquery.Client(project=self.s.GCP_PROJECT_ID)
+        client = bigquery.Client(project=self.c["project_id"], credentials=self.credentials())
         job_config = bigquery.QueryJobConfig(
             query_parameters=[
                 bigquery.ScalarQueryParameter("start", "DATE", start),
                 bigquery.ScalarQueryParameter("end", "DATE", end),
-                bigquery.ScalarQueryParameter("env_key", "STRING", self.s.ENV_TAG_KEY),
+                bigquery.ScalarQueryParameter("project", "STRING", self.c["project_id"]),
                 bigquery.ScalarQueryParameter("tz", "STRING", self.s.TIMEZONE),
             ],
             maximum_bytes_billed=2 * 1024**3,  # guard rail: never scan more than 2 GB per sync
         )
         self.api_calls += 1
-        rows = client.query(BILLING_SQL.format(table=self.s.GCP_BILLING_EXPORT_TABLE), job_config=job_config).result()
-        return parse_billing_rows((dict(r.items()) for r in rows), self.inr_rate, self.account_id())
+        rows = client.query(BILLING_SQL.format(table=self.c["billing_export_table"]), job_config=job_config).result()
+        items = parse_billing_rows((dict(r.items()) for r in rows), self.inr_rate, self.account_id())
+        for item in items:
+            item.environment = self.environment
+        return items
 
     def _cpu_series(self, start: datetime, end: datetime, step_minutes: int):
         self._check()
         from google.cloud import monitoring_v3
 
-        client = monitoring_v3.MetricServiceClient()
+        client = monitoring_v3.MetricServiceClient(credentials=self.credentials())
         interval = monitoring_v3.TimeInterval(
             {"start_time": {"seconds": int(start.timestamp())}, "end_time": {"seconds": int(end.timestamp())}}
         )
@@ -125,7 +154,7 @@ class GCPProvider(CloudProvider):
         self.api_calls += 1
         return client.list_time_series(
             request={
-                "name": f"projects/{self.s.GCP_PROJECT_ID}",
+                "name": f"projects/{self.c['project_id']}",
                 "filter": 'metric.type = "compute.googleapis.com/instance/cpu/utilization"',
                 "interval": interval,
                 "view": monitoring_v3.ListTimeSeriesRequest.TimeSeriesView.FULL,
@@ -148,7 +177,7 @@ class GCPProvider(CloudProvider):
                 name=name,
                 resource_type="containers" if name.startswith("gke-") else "compute",
                 service="Kubernetes Engine" if name.startswith("gke-") else "Compute Engine",
-                environment=normalize_environment(user_labels.get(self.s.ENV_TAG_KEY)),
+                environment=self.environment,
                 region=normalize_region(labels.get("zone", "")),
                 tags=user_labels,
             )
@@ -169,17 +198,49 @@ class GCPProvider(CloudProvider):
 
     def test_connection(self) -> Dict[str, object]:
         if not self.is_configured():
-            return {"ok": False, "message": "GCP service account / billing export table not set in .env"}
-        try:
+            return {"ok": False, "message": "GCP service account / billing export table not set"}
+
+        def sign_in() -> str:
+            from google.auth.transport.requests import Request
+
+            self.api_calls += 1
+            self.credentials().refresh(Request())
+            return f"Signed in as {self.credentials().service_account_email}"
+
+        def billing_export() -> str:
+            from google.cloud import bigquery
+
+            client = bigquery.Client(project=self.c["project_id"], credentials=self.credentials())
+            today = datetime.now(timezone.utc).date()
+            job_config = bigquery.QueryJobConfig(
+                dry_run=True,  # validates table access and job permission, scans nothing and is free
+                use_query_cache=False,
+                query_parameters=[
+                    bigquery.ScalarQueryParameter("start", "DATE", today - timedelta(days=1)),
+                    bigquery.ScalarQueryParameter("end", "DATE", today),
+                    bigquery.ScalarQueryParameter("project", "STRING", self.c["project_id"]),
+                    bigquery.ScalarQueryParameter("tz", "STRING", self.s.TIMEZONE),
+                ],
+            )
+            self.api_calls += 1
+            client.query(BILLING_SQL.format(table=self.c["billing_export_table"]), job_config=job_config)
+            return "Billing export table is readable"
+
+        def monitoring() -> str:
+            end = datetime.now(timezone.utc)
+            next(iter(self._cpu_series(end - timedelta(minutes=30), end, 10)), None)
+            return "Metrics readable"
+
+        def billing_account() -> str:
             from google.cloud import billing_v1
 
-            client = billing_v1.CloudBillingClient()
             self.api_calls += 1
-            info = client.get_project_billing_info(name=f"projects/{self.s.GCP_PROJECT_ID}")
-            return {
-                "ok": bool(info.billing_enabled),
-                "message": f"Billing account {info.billing_account_name or 'n/a'}",
-                "account": self.account_id(),
-            }
-        except Exception as exc:
-            return {"ok": False, "message": f"{type(exc).__name__}: {exc}"}
+            info = billing_v1.CloudBillingClient(credentials=self.credentials()).get_project_billing_info(name=f"projects/{self.c['project_id']}")
+            if not info.billing_enabled:
+                raise ValueError("Billing is not enabled on this project")
+            return f"Billing account {info.billing_account_name or 'n/a'}"
+
+        return self.run_checks([
+            ("Sign in (service account)", sign_in), ("BigQuery billing export", billing_export),
+            ("Cloud Monitoring", monitoring), ("Cloud Billing", billing_account),
+        ])

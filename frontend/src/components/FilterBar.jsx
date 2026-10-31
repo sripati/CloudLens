@@ -2,12 +2,15 @@ import { usePrefs } from '../context/PrefsContext';
 import { ENVIRONMENTS, PROVIDERS, RESOURCE_TYPES } from '../utils/constants';
 import { DASHBOARD_PRESETS } from '../utils/dates';
 import DateRangePicker from './DateRangePicker';
+import { DataModeStrip } from './widgets';
 import { Segmented } from './ui';
 
-/** Shared filter bar (provider, environment, resource type, date range) for Dashboard, Cost Explorer, Resources. */
+/** Shared filter bar (provider, environment, resource type, date range) for Dashboard, Cost Explorer, Resources, Reports. */
 export default function FilterBar({ presets = DASHBOARD_PRESETS }) {
   const { filters, setFilters, resetFilters, range, bounds, setRange } = usePrefs();
   return (
+    <>
+    <DataModeStrip />
     <section className="filter-bar" aria-label="Filters">
       <div className="field">
         <span className="label">Cloud provider</span>
@@ -44,5 +47,6 @@ export default function FilterBar({ presets = DASHBOARD_PRESETS }) {
         <button type="button" className="btn link" onClick={resetFilters}>Reset filters</button>
       </div>
     </section>
+    </>
   );
 }

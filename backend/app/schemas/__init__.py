@@ -170,6 +170,16 @@ class SettingsUpdate(BaseModel):
     notification_channel: Optional[Literal["slack", "teams", "both"]] = None
     idle_cpu_threshold: Optional[float] = Field(default=None, ge=0, le=100)
     underutilized_cpu_threshold: Optional[float] = Field(default=None, ge=0, le=100)
+    # omitted = keep the saved URL, "" = go back to the bundled test inbox
+    slack_webhook_url: Optional[str] = Field(default=None, max_length=2048)
+    teams_webhook_url: Optional[str] = Field(default=None, max_length=2048)
+
+    @field_validator("slack_webhook_url", "teams_webhook_url")
+    @classmethod
+    def _webhook(cls, v):
+        if v and not v.strip().startswith("https://"):
+            raise ValueError("webhook URL must start with https://")
+        return v.strip() if v else v
 
     @field_validator("provider_budgets_usd")
     @classmethod
@@ -180,6 +190,19 @@ class SettingsUpdate(BaseModel):
             if k not in PROVIDERS or val < 0:
                 raise ValueError("provider budgets must use aws/azure/gcp keys and positive values")
         return v
+
+
+LiveEnvironment = Literal["production", "staging", "development"]
+
+
+class CloudConfigIn(BaseModel):
+    environment: LiveEnvironment
+    config: Dict[str, str] = Field(default_factory=dict)
+    activate: bool = False  # also switch the cloud to live after saving
+
+
+class CloudModeIn(BaseModel):
+    mode: Literal["mock", "live"]
 
 
 class SyncRequest(BaseModel):

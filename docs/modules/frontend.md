@@ -17,8 +17,8 @@ src/
 ├── utils/dates.js           ISO-date math, presets (relative to today), resolveRange, validateRange
 ├── utils/constants.js       providers, environments, types, colours, labels
 ├── components/
-│   ├── Layout.jsx           sidebar nav (role-aware), cloud connection status, alert badge
-│   ├── PageHeader.jsx       title + currency toggle + theme toggle + user chip / sign out
+│   ├── Layout.jsx           sidebar nav (role-aware), cloud connection status, alert badge, user bar (name, role, Logout)
+│   ├── PageHeader.jsx       title, subtitle and page actions
 │   ├── FilterBar.jsx        provider · environment · type · DateRangePicker
 │   ├── DateRangePicker.jsx  calendar popover: presets, 2-month calendar, From/To inputs, validation, keyboard support
 │   ├── ui.jsx               Card, Segmented, Badge, StatusBadge, Progress, Modal, Toast, Skeleton, ErrorBox
@@ -34,10 +34,9 @@ src/
 | State | Where | Persistence |
 |---|---|---|
 | JWT | `api/client.js` | localStorage `cloudlens.token` |
-| Theme | PrefsContext | localStorage `cloudlens.theme` (also applied before first paint in `index.html`) |
-| Currency | PrefsContext | localStorage `cloudlens.currency` |
-| Filters (provider, env, type, `range`) | PrefsContext | sessionStorage `cloudlens.filters`, shared by Dashboard, Cost Explorer, Resources and resource detail. `range` stores a preset key (`last_30_days`…) or `{preset:'custom', start, end}` |
-| Report period | ReportsPage | sessionStorage `cloudlens.reportRange` (default *This month*) |
+| Theme (changed in Settings) | PrefsContext | localStorage `cloudlens.theme` (also applied before first paint in `index.html`) |
+| Currency (changed in Settings) | PrefsContext | localStorage `cloudlens.currency` |
+| Filters (provider, env, type, `range`) | PrefsContext | sessionStorage `cloudlens.filters`, shared by Dashboard, Cost Explorer, Resources, Reports and resource detail. `range` stores a preset key (`last_30_days`…) or `{preset:'custom', start, end}` |
 | Date bounds (`today`, `min_date`) | PrefsContext, from `GET /costs/date-bounds` | refreshed on load and every 15 min |
 | Server data | `useApi` per component | none |
 

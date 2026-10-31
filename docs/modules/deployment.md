@@ -7,7 +7,7 @@
 
 | Image | Base | Highlights |
 |---|---|---|
-| backend | python:3.12-slim | `INSTALL_CLOUD_SDKS` build arg; non-root uid 10001; healthcheck on `/health`; 1 uvicorn worker |
+| backend | python:3.12-slim | includes the cloud SDKs; non-root uid 10001; healthcheck on `/health`; 1 uvicorn worker |
 | frontend | node:20-alpine → nginx:1.27-alpine | Multi-stage; SPA fallback; gzip; 1-year cache for `/assets`; proxies `/api`, `/health`, `/docs`, `/mock-inbox/`; security headers |
 | mock-receiver | python:3.12-slim | Non-root; about 60 MB |
 
@@ -20,7 +20,7 @@ even if the backend is still booting.
 - `x-logging` anchor: json-file logs capped at 10 MB × 3 per container.
 - Volumes: `pgdata`, `promdata`, `amdata` (data survives `docker compose down`; `down -v` deletes it).
 - Ports: only `HTTP_PORT` is public; the API, Prometheus, Alertmanager and mock receiver bind to `127.0.0.1`.
-- `secrets/` is mounted read-only at `/secrets` (GCP key).
+- Volume `alertshared` is shared by the backend (`/shared`) and Alertmanager (read-only), for the Slack webhook URL.
 
 ## Scripts
 

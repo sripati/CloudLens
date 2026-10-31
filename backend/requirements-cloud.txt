@@ -1,6 +1,4 @@
-# Cloud provider SDKs (only needed when DATA_SOURCE=live).
-# The Docker image installs them by default; build with --build-arg INSTALL_CLOUD_SDKS=false
-# for a smaller image when you only run in mock mode.
+# Cloud provider SDKs, used by clouds in Live mode.
 boto3==1.35.90
 azure-identity==1.19.0
 azure-mgmt-costmanagement==4.0.1

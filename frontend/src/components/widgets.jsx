@@ -1,7 +1,8 @@
 // Dashboard widgets shared by several screens.
 import { useNavigate } from 'react-router-dom';
 import { usePrefs } from '../context/PrefsContext';
-import { ENV_LABEL, PROVIDER_COLOR, PROVIDER_LABEL, TYPE_LABEL } from '../utils/constants';
+import { useApi } from '../hooks/useApi';
+import { ENV_LABEL, LIVE_ENVIRONMENTS, MODE_LABEL, PROVIDER_COLOR, PROVIDER_LABEL, TYPE_LABEL } from '../utils/constants';
 import { pct, timeAgo } from '../utils/format';
 import { Badge, Empty, Progress, ProviderDot, Skeleton, StatusBadge } from './ui';
 
@@ -182,6 +183,36 @@ export function AlertList({ events = [], empty = 'No alerts yet.' }) {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+/** Which data each cloud is showing, and which Live clouds have nothing for the selected environment. */
+export function DataModeStrip() {
+  const { data } = useApi('/sync/status', null, { refreshMs: 60000 });
+  const { filters } = usePrefs();
+  if (!data) return null;
+  const clouds = data.providers.filter((p) => p.enabled);
+  const env = filters.environment;
+  const notConnected = LIVE_ENVIRONMENTS.includes(env)
+    ? clouds.filter((p) => p.mode === 'live' && !p.connections.some((c) => c.environment === env)).map((p) => PROVIDER_LABEL[p.provider])
+    : [];
+  return (
+    <div className="mode-strip" aria-label="Data mode per cloud">
+      <span className="tiny">Data:</span>
+      {clouds.map((p) => {
+        const run = p.last_run?.status;
+        const problem = p.mode === 'live' && (run === 'failed' || run === 'skipped');
+        const loading = p.mode === 'live' && run === 'running';
+        const envs = p.mode === 'live' ? ` (${p.connections.map((c) => ENV_LABEL[c.environment]).join(', ')})` : '';
+        return (
+          <Badge key={p.provider} kind={p.mode === 'mock' ? 'info' : problem ? 'warning' : 'ok'}>
+            {PROVIDER_LABEL[p.provider]}: {MODE_LABEL[p.mode]}{envs}{problem ? ' · sync failing, showing last data' : loading ? ' · loading' : ''}
+          </Badge>
+        );
+      })}
+      {data.data_source === 'mixed' && <span className="warn-text">Totals combine real and simulated cost.</span>}
+      {notConnected.length > 0 && <span className="warn-text">{notConnected.join(', ')}: no {ENV_LABEL[env]} configuration, so no data here.</span>}
     </div>
   );
 }

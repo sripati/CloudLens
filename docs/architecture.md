@@ -70,11 +70,12 @@ reached through nginx or an SSH tunnel.
 1. **Scheduler** (`services/scheduler.py`) triggers jobs: backfill on first start, a daily sync at
    02:00 IST, an intraday refresh of today's cost every 15 min, and utilization every 5 min.
 2. **Provider factory** (`services/providers/__init__.py`) returns `MockProvider` or the live
-   connector, depending on `DATA_SOURCE`.
+   connectors, depending on that cloud's mode on the Cloud Accounts screen (Mock by default). Live uses one connector per
+   configured environment. Each row stores its `source`, and analytics reads only the selected mode's rows, so clouds can be
+   mixed and switched without losing data ([live-cloud-setup.md](live-cloud-setup.md)).
 3. **Connectors** return unified dataclasses: `CostItem`, `ResourceItem`, `MetricItem`.
 4. **Normalizer** maps native service names to `compute | containers | database | storage | networking | other`.
-   It maps tag values (`prod`, `stg`, `dev`...) to `production | staging | development | unassigned`,
-   and converts INR billing to USD.
+   It converts INR billing to USD. A Live row's environment comes from its connection; mock rows have built-in environments.
 5. **Ingestion** upserts with `INSERT … ON CONFLICT DO UPDATE` on natural keys, so every job is
    idempotent. Each run is logged in `sync_runs`, including the number of API calls made.
 
@@ -131,7 +132,7 @@ useful when running without Docker.
 - Passwords are hashed with bcrypt (12 rounds). JWTs are signed HS256 with an 8-hour expiry.
 - Every API route requires a token. Write operations require the `admin` role (`require_admin`).
 - The Alertmanager webhook is protected by a shared bearer token, compared in constant time.
-- Secrets live only in `.env` and `secrets/`, both git-ignored. The AWS instance role is preferred over keys.
+- Application secrets live only in `.env` (git-ignored). Cloud credentials and webhook URLs are stored encrypted in the database. The AWS instance role is preferred over keys.
 - Containers run as non-root users. Only the dashboard port is exposed. nginx adds security headers.
 - Cloud credentials need **read-only** permissions (see `deploy/aws/iam-policy.json` and the setup guide).
 

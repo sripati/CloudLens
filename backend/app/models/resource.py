@@ -27,6 +27,7 @@ class Resource(Base):
     region: Mapped[str] = mapped_column(String(40), default="global")
     sku: Mapped[str] = mapped_column(String(80), default="")  # instance type / tier
     status: Mapped[str] = mapped_column(String(20), default="running")
+    source: Mapped[str] = mapped_column(String(10), default="mock")  # mock | live
     tags: Mapped[dict] = mapped_column(JSON, default=dict)
     first_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

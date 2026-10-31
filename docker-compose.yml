@@ -30,10 +30,7 @@ services:
     logging: *default-logging
 
   backend:
-    build:
-      context: ./backend
-      args:
-        INSTALL_CLOUD_SDKS: ${INSTALL_CLOUD_SDKS:-true}
+    build: ./backend
     image: cloudlens-backend:latest
     restart: unless-stopped
     env_file: .env
@@ -41,8 +38,8 @@ services:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-cloudlens}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-cloudlens}
       ALERT_DELIVERY: ${ALERT_DELIVERY:-alertmanager}
     volumes:
-      # optional: GCP service-account key (set GOOGLE_APPLICATION_CREDENTIALS=/secrets/gcp-key.json)
-      - ./secrets:/secrets:ro
+      # the backend leaves the Slack URL saved in Settings here for Alertmanager
+      - alertshared:/shared
     depends_on:
       db:
         condition: service_healthy
@@ -87,12 +84,12 @@ services:
       - -c
       - >
         sed -e "s|__WEBHOOK_TOKEN__|$${ALERTMANAGER_WEBHOOK_TOKEN}|g"
-        -e "s|__SLACK_WEBHOOK_URL__|$${SLACK_WEBHOOK_URL}|g"
         /etc/alertmanager/alertmanager.tmpl.yml > /tmp/alertmanager.yml &&
         exec /bin/alertmanager --config.file=/tmp/alertmanager.yml --storage.path=/alertmanager --cluster.listen-address=
     volumes:
       - ./monitoring/alertmanager/alertmanager.tmpl.yml:/etc/alertmanager/alertmanager.tmpl.yml:ro
       - amdata:/alertmanager
+      - alertshared:/shared:ro
     ports:
       - "127.0.0.1:9093:9093"
     logging: *default-logging
@@ -109,3 +106,4 @@ volumes:
   pgdata:
   promdata:
   amdata:
+  alertshared:

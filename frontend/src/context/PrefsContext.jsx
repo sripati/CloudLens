@@ -1,8 +1,9 @@
 // User preferences: theme (dark/light), display currency (USD/INR), the shared filter state used by
-// Dashboard, Cost Explorer and Resources, and the server's date bounds (today + first date with data).
+// Dashboard, Cost Explorer, Resources and Reports, and the server's date bounds (today + first date with data).
 // Theme/currency persist in localStorage, filters in sessionStorage.
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { api } from '../api/client';
+import { ENVIRONMENTS } from '../utils/constants';
 import { defaultBounds, resolveRange } from '../utils/dates';
 import { compact, money } from '../utils/format';
 
@@ -32,6 +33,7 @@ function loadFilters() {
   const stored = load(sessionStorage, 'cloudlens.filters', {});
   const f = { ...DEFAULT_FILTERS, ...stored };
   if (!f.range || typeof f.range !== 'object') f.range = DEFAULT_RANGE; // older format stored `days`
+  if (f.environment !== 'all' && !ENVIRONMENTS.some((e) => e.value === f.environment)) f.environment = 'all';
   delete f.days;
   delete f.start;
   delete f.end;

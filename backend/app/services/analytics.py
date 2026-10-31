@@ -11,10 +11,10 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from typing import Dict, List, Optional
 
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, exists, func, or_, select
 from sqlalchemy.orm import Session
 
-from app.models import AlertEvent, AlertRule, CostRecord, Resource, ResourceMetric
+from app.models import AlertEvent, AlertRule, CloudAccount, CloudConnection, CostRecord, Resource, ResourceMetric
 from app.services import settings_service
 from app.services.ingestion import local_today
 
@@ -54,8 +54,28 @@ class Filters:
         }
 
 
+def _is_active(model):
+    """Rows of the cloud's selected mode. Live rows must also belong to a connection saved for that
+    environment and account, so removing or replacing a connection takes its figures off the screen."""
+    selected = select(CloudAccount.mode).where(CloudAccount.provider == model.provider).correlate(model).scalar_subquery()
+    connected = exists().where(
+        CloudConnection.provider == model.provider,
+        CloudConnection.environment == model.environment,
+        CloudConnection.account == model.account_id,
+    ).correlate(model)
+    return and_(model.source == func.coalesce(selected, "mock"), or_(model.source == "mock", connected))
+
+
+def _active_cost():
+    return _is_active(CostRecord)
+
+
+def _active_resource():
+    return _is_active(Resource)
+
+
 def _cost_where(f: Filters, with_dates: bool = True):
-    conds = []
+    conds = [_active_cost()]
     if with_dates:
         conds += [CostRecord.usage_date >= f.start, CostRecord.usage_date <= f.end]
     if f.providers:
@@ -68,11 +88,11 @@ def _cost_where(f: Filters, with_dates: bool = True):
         conds.append(CostRecord.service.in_(f.services))
     if f.regions:
         conds.append(CostRecord.region.in_(f.regions))
-    return and_(*conds) if conds else True
+    return and_(*conds)
 
 
 def _res_where(f: Filters):
-    conds = []
+    conds = [_active_resource()]
     if f.providers:
         conds.append(Resource.provider.in_(f.providers))
     if f.environments:
@@ -81,7 +101,7 @@ def _res_where(f: Filters):
         conds.append(Resource.resource_type.in_(f.resource_types))
     if f.regions:
         conds.append(Resource.region.in_(f.regions))
-    return and_(*conds) if conds else True
+    return and_(*conds)
 
 
 def _pct(cur: float, prev: float) -> Optional[float]:
@@ -447,7 +467,7 @@ def utilization(db: Session, f: Filters, hours: int = 168) -> Dict[str, object]:
 
 def resource_detail(db: Session, pk: int, days: int = 30, f: Optional[Filters] = None) -> Optional[Dict[str, object]]:
     """Drill-down for one resource. Cost covers `f` (start..end) when given, else the last `days` days."""
-    r = db.get(Resource, pk)
+    r = db.execute(select(Resource).where(Resource.id == pk, _active_resource())).scalar_one_or_none()
     if r is None:
         return None
     today = local_today()

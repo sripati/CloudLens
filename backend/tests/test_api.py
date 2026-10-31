@@ -126,6 +126,29 @@ def test_sync_status_and_mock_anomaly(client, admin_headers):
     assert client.get(f"{API}/sync/runs", headers=h).json()
 
 
+def test_report_follows_all_filters(client, viewer_headers):
+    t = _today().isoformat()
+    params = {"start": _today().replace(day=1).isoformat(), "end": t}
+    everything = client.get(f"{API}/reports/summary", params=params, headers=viewer_headers).json()
+    assert everything["budget_scope"] == "all" and everything["budget_applies_to_filtered_view"] is True
+
+    aws = client.get(f"{API}/reports/summary", params={**params, "provider": "aws"}, headers=viewer_headers).json()
+    assert 0 < aws["total"] < everything["total"]
+    assert [p["key"] for p in aws["by_provider"]] == ["aws"]
+    assert aws["budget_scope"] == "aws" and aws["monthly_budget"] != everything["monthly_budget"]  # the cloud's own budget
+
+    narrow = {**params, "provider": "aws", "environment": "production", "resource_type": "compute"}
+    rep = client.get(f"{API}/reports/summary", params=narrow, headers=viewer_headers).json()
+    assert 0 < rep["total"] < aws["total"]
+    assert [e["key"] for e in rep["by_environment"]] == ["production"] and [r["key"] for r in rep["by_resource_type"]] == ["compute"]
+    assert rep["budget_applies_to_filtered_view"] is False
+    assert all(r["provider"] == "aws" and r["environment"] == "production" and r["resource_type"] == "compute" for r in rep["recommendations"])
+
+    csv_text = client.get(f"{API}/reports/summary.csv", params=narrow, headers=viewer_headers).text
+    assert "Filters,provider,aws,environment,production,resource type,compute" in csv_text
+    assert f"Total (USD),{rep['total']}," in csv_text
+
+
 def test_reports(client, viewer_headers):
     r = client.get(f"{API}/reports/monthly", headers=viewer_headers).json()
     assert r["total"] > 0 and r["by_provider"]

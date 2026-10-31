@@ -3,8 +3,8 @@
 * Slack: Incoming Webhook (Block Kit message)
 * Teams: Workflows / Incoming Webhook accepting an Adaptive Card attachment
 
-In development the webhook URLs point to the bundled mock receiver (monitoring/mock-receiver),
-which records every message so alert delivery can be demonstrated without real workspaces.
+Webhook URLs are saved on the Settings screen. Until then, messages go to the bundled test inbox
+(monitoring/mock-receiver), which records them so delivery can be demonstrated without real workspaces.
 """
 from __future__ import annotations
 
@@ -71,16 +71,15 @@ def teams_payload(title: str, message: str, severity: str, status: str, fields: 
     }
 
 
-def send(channels: List[str], title: str, message: str, severity: str, status: str, fields: Dict[str, str]) -> Tuple[str, str]:
+def send(channels: List[str], title: str, message: str, severity: str, status: str, fields: Dict[str, str], urls: Dict[str, str]) -> Tuple[str, str]:
     """Send to each channel. Returns (status, error) where status is sent|partial|failed|skipped."""
-    s = get_settings()
     if not channels:
         return "skipped", "no channel selected"
     errors = []
     ok = 0
     with httpx.Client(timeout=10) as client:
         for ch in channels:
-            url = s.SLACK_WEBHOOK_URL if ch == "slack" else s.TEAMS_WEBHOOK_URL
+            url = urls.get(ch)
             if not url:
                 errors.append(f"{ch}: webhook URL not configured")
                 continue

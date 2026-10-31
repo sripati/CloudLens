@@ -11,7 +11,7 @@ import { AlertList, BarList, KpiCard, ProviderLegendRows, ResourceTable, Utiliza
 import { useAuth } from '../context/AuthContext';
 import { usePrefs } from '../context/PrefsContext';
 import { useApi } from '../hooks/useApi';
-import { ENV_LABEL, PROVIDER_LABEL, TYPE_LABEL } from '../utils/constants';
+import { MODE_LABEL, PROVIDER_LABEL, scopeLabel } from '../utils/constants';
 import { fmtRange } from '../utils/dates';
 import { dateTime, longDate, shortDate, signedPct } from '../utils/format';
 
@@ -30,11 +30,7 @@ export default function DashboardPage() {
   const rangeName = range.preset === 'custom' ? fmtRange(range.start, range.end) : range.label;
   const monthName = MONTH_NAMES[Number(bounds.today.slice(5, 7)) - 1];
   const keys = data?.trend?.keys || [];
-  const scopeBits = [
-    filters.provider === 'all' ? 'All providers' : PROVIDER_LABEL[filters.provider],
-    filters.environment === 'all' ? 'all environments' : ENV_LABEL[filters.environment],
-    filters.resource_type === 'all' ? 'all resource types' : TYPE_LABEL[filters.resource_type],
-  ].join(' · ');
+  const scopeBits = scopeLabel(filters);
   const budget = s?.budget;
   const dailyBudget = budget?.applies_to_filtered_view && budget?.budget ? budget.budget / (s?.month?.days_in_month || 30) : null;
   const up = (s?.period_change_pct ?? 0) >= 0;
@@ -127,7 +123,7 @@ export default function DashboardPage() {
       </Card>
 
       <footer className="footer">
-        <span>Data source: {settings?.system?.data_source === 'live' ? 'live cloud APIs' : 'mock data generator'}</span>
+        <span>Data source: {Object.entries(settings?.system?.provider_modes || {}).map(([p, m]) => `${PROVIDER_LABEL[p]}: ${MODE_LABEL[m]}`).join(' · ')}</span>
         <span>Last refreshed: {updatedAt ? dateTime(updatedAt.toISOString()) : '–'} (auto every 60 s)</span>
         {data?.anomalies?.length ? <span>Latest anomaly: {shortDate(data.anomalies[0].date)} {PROVIDER_LABEL[data.anomalies[0].provider]} ({signedPct(data.anomalies[0].change_pct, 0)})</span> : null}
         <span>{currency === 'INR' ? `1 USD = ₹${Number(rate).toFixed(2)} (Settings)` : `Currency USD · INR at ₹${Number(rate).toFixed(2)}`}</span>

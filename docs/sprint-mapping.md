@@ -9,9 +9,9 @@ and goal from the six sprints is implemented, so it can be checked during evalua
 |---|---|
 | Repository, folder structure, initial requirements | Repo layout (README §Project structure), `backend/requirements*.txt`, `frontend/package.json`, `Makefile` |
 | Connect to AWS, Azure, GCP APIs; verify access | `backend/app/services/providers/aws.py`, `azure.py`, `gcp.py`; **Cloud Accounts → Test connection** (`POST /sync/test/{provider}`) |
-| Environment variables and credentials | `.env.example` (all providers), `app/core/config.py`, `secrets/`, IAM policy `deploy/aws/iam-policy.json` |
+| Environment variables and credentials | `.env.example` (application settings), Cloud Accounts screen (cloud credentials, encrypted), `app/core/config.py`, `secrets/`, IAM policy `deploy/aws/iam-policy.json` |
 | Pull sample data, analyse format | Parsers `parse_cost_explorer`, `parse_cost_query`, `parse_billing_rows` with unit tests on real response shapes; field mapping in [database.md](database.md#unified-cost-schema-the-heart-of-the-system) |
-| **Goal:** connectivity + initial data | Mock/live switch (`DATA_SOURCE`), sync history with API-call counts |
+| **Goal:** connectivity + initial data | Mock or Live mode per cloud, one connection per environment (Cloud Accounts screen), connection test, sync history with API-call counts |
 
 ## Sprint 2: Data aggregation and storage
 

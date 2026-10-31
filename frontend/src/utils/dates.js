@@ -128,7 +128,6 @@ export const PRESETS = {
 };
 
 export const DASHBOARD_PRESETS = ['last_7_days', 'last_30_days', 'last_90_days', 'this_month', 'last_month', 'last_3_months', 'last_6_months', 'year_to_date', 'last_12_months'];
-export const REPORT_PRESETS = ['this_month', 'last_month', 'last_3_months', 'last_6_months', 'year_to_date', 'last_12_months', 'last_30_days', 'last_90_days'];
 
 export function defaultBounds() {
   const today = todayLocal();

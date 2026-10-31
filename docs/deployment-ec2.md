@@ -53,11 +53,6 @@ POSTGRES_PASSWORD=<strong>
 JWT_SECRET=<openssl rand -hex 32>
 ADMIN_PASSWORD=<strong>
 ALERTMANAGER_WEBHOOK_TOKEN=<openssl rand -hex 16>
-DATA_SOURCE=mock                       # or live
-AWS_USE_DEFAULT_CREDENTIALS=true       # uses the instance role, no keys on disk
-INTRADAY_COST_REFRESH_MINUTES=360      # when live: limits Cost Explorer charges
-SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...   # or keep the mock receiver
-TEAMS_WEBHOOK_URL=https://...
 ```
 
 ## 4. Deploy
@@ -67,7 +62,7 @@ EC2_HOST=<public-ip> SSH_KEY=~/.ssh/my-keypair.pem ./deploy/aws/deploy.sh
 ```
 
 `deploy.sh` rsyncs the project to `/opt/cloudlens`, uploads `.env.staging` as `.env` (and
-`secrets/gcp-key.json` if present), runs `docker compose up -d --build`, prunes old images, and waits
+runs `docker compose up -d --build`, prunes old images, and waits
 for `/health`. The first build takes about 5–8 minutes on a t3.small.
 
 Open `http://<public-ip>/`.
@@ -115,3 +110,5 @@ volumes `pgdata`, `promdata` and `amdata`.
 | Alert | Inject spike → wait 2 min | Message in Slack / Teams / mock inbox |
 | Date range | Date button → *Last 6 months*; then type a future *To* date | Data for six months; future date shows an error and Apply stays disabled |
 | Restart | `docker compose restart` | Data and rules preserved |
+
+After deploying, connect real accounts on the **Cloud Accounts** screen and choose *EC2 instance role* to use the instance's role, so no keys are stored. Save Slack and Teams webhook URLs in **Settings**. See [live-cloud-setup.md](live-cloud-setup.md).

@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, get_filters, validate_range
 from app.core.database import get_db
 from app.models import CostRecord, User
-from app.services import analytics, settings_service
+from app.services import analytics
 from app.services.analytics import Filters
 from app.services.ingestion import local_today
 
@@ -33,7 +33,8 @@ def range_label(start: date, end: date) -> str:
 def build_report(db: Session, f: Filters) -> dict:
     """Report for f.start..f.end compared with the previous period of equal length."""
     days = f.days
-    monthly_budget = float(settings_service.get_value(db, "monthly_budget_usd"))
+    budget_view = analytics.budget_info(db, f, 0, 0)  # the selected cloud's budget, or the all-clouds one
+    monthly_budget = budget_view["budget"]
     spans = analytics.month_spans(f.start, f.end)
     # budget for the range = each month's budget pro-rated by the days of that month inside the range
     budget = sum(monthly_budget * sp["days_covered"] / sp["days_in_month"] for sp in spans)
@@ -42,13 +43,14 @@ def build_report(db: Session, f: Filters) -> dict:
     prev_total = analytics.total_cost(db, prev_f)
     recs = analytics.recommendations(db, f)
     months = analytics.monthly(db, f, None, "provider")
-    data_from = db.scalar(select(func.min(CostRecord.usage_date)))
+    data_from = db.scalar(select(func.min(CostRecord.usage_date)).where(analytics._cost_where(f, with_dates=False)))
     for m in months["months"]:
         m_budget = monthly_budget * m["days_covered"] / m["days_in_month"]
         m["budget"] = round(m_budget, 2)
         m["budget_used_pct"] = round(m["total"] / m_budget * 100, 2) if m_budget else None
     return {
         "label": range_label(f.start, f.end),
+        "filters": f.describe(),
         "period": {"start": f.start.isoformat(), "end": f.end.isoformat(), "days": days},
         "previous_period": {
             "start": prev_f.start.isoformat(),
@@ -62,6 +64,8 @@ def build_report(db: Session, f: Filters) -> dict:
         "change_pct": analytics._pct(total, prev_total),
         "budget": round(budget, 2),
         "monthly_budget": monthly_budget,
+        "budget_scope": budget_view["scope"],
+        "budget_applies_to_filtered_view": budget_view["applies_to_filtered_view"],
         "budget_used_pct": round(total / budget * 100, 2) if budget else None,
         "monthly": months,
         "by_provider": analytics.breakdown(db, f, "provider"),
@@ -81,8 +85,11 @@ def report_csv(rep: dict) -> StreamingResponse:
     p = rep["period"]
     w.writerow(["CloudLens cost report", rep["label"]])
     w.writerow(["Period", p["start"], p["end"], f'{p["days"]} days'])
+    flt = rep["filters"]
+    w.writerow(["Filters", "provider", ",".join(flt["providers"]) or "all", "environment", ",".join(flt["environments"]) or "all",
+                "resource type", ",".join(flt["resource_types"]) or "all"])
     w.writerow(["Total (USD)", rep["total"], "Previous period", rep["previous_total"], "Change %", rep["change_pct"]])
-    w.writerow(["Budget for period (USD)", rep["budget"], "Budget used %", rep["budget_used_pct"]])
+    w.writerow(["Budget for period (USD)", rep["budget"], "Budget used %", rep["budget_used_pct"], "Budget scope", rep["budget_scope"]])
     w.writerow([])
     keys = rep["monthly"]["keys"]
     w.writerow(["Monthly breakdown"])

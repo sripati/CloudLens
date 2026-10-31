@@ -15,10 +15,11 @@ from fastapi.responses import JSONResponse, Response
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from sqlalchemy import text
 
-from app.api.routes import alerts, auth, costs, dashboard, reports, resources, settings, sync
+from app.api.routes import alerts, auth, cloud_accounts, costs, dashboard, reports, resources, settings, sync
 from app.core.config import get_settings
 from app.core.database import SessionLocal, init_db
-from app.services import prom_metrics, scheduler
+from app.services import cloud_accounts as cloud_accounts_service
+from app.services import prom_metrics, scheduler, settings_service
 from app.services.seed import seed
 
 s = get_settings()
@@ -32,10 +33,11 @@ async def lifespan(app: FastAPI):
     db = SessionLocal()
     try:
         seed(db)
+        settings_service.publish_alertmanager_slack_url(db)
     finally:
         db.close()
     scheduler.start()
-    log.info("CloudLens started (DATA_SOURCE=%s, ALERT_DELIVERY=%s)", s.DATA_SOURCE, s.ALERT_DELIVERY)
+    log.info("CloudLens started (ALERT_DELIVERY=%s)", s.ALERT_DELIVERY)
     yield
     scheduler.shutdown()
 
@@ -67,21 +69,23 @@ async def metrics_middleware(request: Request, call_next):
     return response
 
 
-for r in (auth.router, dashboard.router, costs.router, resources.router, alerts.router, sync.router, settings.router, reports.router):
+for r in (auth.router, dashboard.router, costs.router, resources.router, alerts.router, sync.router, settings.router, reports.router, cloud_accounts.router):
     app.include_router(r, prefix=s.API_PREFIX)
 
 
 @app.get("/health", tags=["system"])
 def health():
     db = SessionLocal()
+    source = "mock"
     try:
         db.execute(text("SELECT 1"))
+        source = cloud_accounts_service.summary(db)
         db_ok = True
     except Exception:
         db_ok = False
     finally:
         db.close()
-    body = {"status": "ok" if db_ok else "degraded", "database": db_ok, "data_source": s.DATA_SOURCE, "version": app.version}
+    body = {"status": "ok" if db_ok else "degraded", "database": db_ok, "data_source": source, "version": app.version}
     return JSONResponse(body, status_code=200 if db_ok else 503)
 
 

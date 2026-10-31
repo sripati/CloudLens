@@ -7,8 +7,10 @@
 - `Settings` (pydantic-settings) reads every environment variable, or `.env` / `../.env`. Defaults make the
   app run in mock mode with no configuration.
 - `get_settings()` is cached with `lru_cache`, so read env vars **before** first import (the tests do this in `conftest.py`).
-- Helper properties: `enabled_providers`, `cors_origins`, `aws_regions` (comma-separated values → lists).
-- A validator rejects any `DATA_SOURCE` other than `mock` or `live`.
+- Helper properties: `enabled_providers`, `cors_origins` (comma-separated values → lists).
+- Nothing about Live connections is configured here: every cloud starts on Mock, and the Cloud Accounts screen decides after that.
+- `crypto.py` encrypts credentials saved on that screen and webhook URLs saved in Settings (Fernet, key derived from `JWT_SECRET`).
+- `database.add_missing_columns` applies schema changes made after the first release, because `create_all` never alters existing tables.
 
 **Extending:** add a typed field with a default, document it in `.env.example`, and expose it in
 `routes/settings.py → _public()["system"]` if the UI should display it.

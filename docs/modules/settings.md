@@ -2,8 +2,10 @@
 
 **Path:** `backend/app/services/settings_service.py`, route `routes/settings.py`, screen [Settings](../screens/settings.md)
 
-Runtime settings that admins change from the UI are stored as JSON in `app_settings`; secrets
-and infrastructure settings stay in `.env`.
+Runtime settings that admins change from the UI are stored as JSON in `app_settings`; application
+secrets and infrastructure settings stay in `.env`. Slack and Teams webhook URLs are stored encrypted in `app_settings`
+(`webhooks_encrypted`); `webhook_urls` falls back to the bundled test inbox, and `publish_alertmanager_slack_url` writes the Slack URL
+to the volume Alertmanager reads.
 
 | Key | Default | Used by |
 |---|---|---|

@@ -4,6 +4,7 @@ import PageHeader from '../components/PageHeader';
 import { Card, ErrorBox, Segmented, Skeleton, Toast } from '../components/ui';
 import { useAuth } from '../context/AuthContext';
 import { usePrefs } from '../context/PrefsContext';
+import { MODE_LABEL, PROVIDER_LABEL } from '../utils/constants';
 
 export default function SettingsPage() {
   const { isAdmin } = useAuth();
@@ -12,10 +13,36 @@ export default function SettingsPage() {
   const [err, setErr] = useState(null);
   const [toast, setToast] = useState('');
   const [pw, setPw] = useState({ current_password: '', new_password: '' });
+  const [hooks, setHooks] = useState({ slack: '', teams: '' });
 
   useEffect(() => {
     if (settings) setForm({ ...settings, provider_budgets_usd: { ...settings.provider_budgets_usd } });
   }, [settings]);
+
+  async function useTestInbox(channel) {
+    setErr(null);
+    try {
+      await api.put('/settings', { [`${channel}_webhook_url`]: '' });
+      await refreshSettings();
+      setToast('This channel now uses the test inbox.');
+    } catch (e) {
+      setErr(e);
+    }
+  }
+
+  function webhookField(channel, label, saved) {
+    const id = `s-${channel}-hook`;
+    return (
+      <div className="field">
+        <label className="label" htmlFor={id}>{label}</label>
+        <input id={id} type="password" className="input mono" autoComplete="new-password" placeholder={saved ? 'Saved. Leave blank to keep it.' : 'https://...'} value={hooks[channel]} onChange={(e) => setHooks({ ...hooks, [channel]: e.target.value })} />
+        <span className="field-help">
+          {saved ? 'Using the saved URL. ' : 'Using the bundled test inbox. '}
+          {saved && <button type="button" className="btn link" onClick={() => useTestInbox(channel)}>Use test inbox</button>}
+        </span>
+      </div>
+    );
+  }
 
   async function save() {
     setErr(null);
@@ -28,7 +55,10 @@ export default function SettingsPage() {
         notification_channel: form.notification_channel,
         idle_cpu_threshold: Number(form.idle_cpu_threshold),
         underutilized_cpu_threshold: Number(form.underutilized_cpu_threshold),
+        ...(hooks.slack.trim() ? { slack_webhook_url: hooks.slack.trim() } : {}),
+        ...(hooks.teams.trim() ? { teams_webhook_url: hooks.teams.trim() } : {}),
       });
+      setHooks({ slack: '', teams: '' });
       await refreshSettings();
       await api.post('/alerts/evaluate');
       setToast('Settings saved. Alert rules re-evaluated.');
@@ -86,10 +116,14 @@ export default function SettingsPage() {
                 <select id="s-ch" className="select" value={form.notification_channel} onChange={(e) => setForm({ ...form, notification_channel: e.target.value })}>
                   <option value="slack">Slack</option><option value="teams">Microsoft Teams</option><option value="both">Slack + Teams</option>
                 </select></div>
-              <p className="tiny" style={{ marginTop: 12 }}>
-                Slack webhook: {sys?.slack_configured ? (sys.slack_is_mock ? 'mock receiver' : 'configured') : 'not set'} · Teams webhook: {sys?.teams_configured ? (sys.teams_is_mock ? 'mock receiver' : 'configured') : 'not set'}.
-                Webhook URLs are secrets and are set in .env (SLACK_WEBHOOK_URL, TEAMS_WEBHOOK_URL).
-              </p>
+              {sys?.webhooks?.unreadable && <div className="error-box" style={{ marginTop: 12 }}>The saved webhook URLs cannot be decrypted because JWT_SECRET changed. Enter them again.</div>}
+              {isAdmin && (
+                <div className="stack" style={{ marginTop: 12 }}>
+                  {webhookField('slack', 'Slack webhook URL', sys?.webhooks?.slack_saved)}
+                  {webhookField('teams', 'Microsoft Teams webhook URL', sys?.webhooks?.teams_saved)}
+                </div>
+              )}
+              <p className="tiny" style={{ marginTop: 12 }}>Webhook URLs are secrets: they are stored encrypted and never shown again.</p>
             </fieldset>
           )}
         </Card>
@@ -103,17 +137,17 @@ export default function SettingsPage() {
             </fieldset>
           )}
         </Card>
-        <Card className="flex-1" title="System" subtitle="From the server's .env (read-only)">
+        <Card className="flex-1" title="System" subtitle="Read-only">
           {!sys ? <Skeleton height={120} /> : (
             <dl className="kv">
-              <dt>Data source</dt><dd className="mono">{sys.data_source}</dd>
+              <dt>Data source</dt><dd>{Object.entries(sys.provider_modes || {}).map(([p, m]) => <div key={p}>{PROVIDER_LABEL[p]}: {MODE_LABEL[m]}</div>)}</dd>
               <dt>Providers</dt><dd>{sys.enabled_providers.join(', ')}</dd>
               <dt>Alert delivery</dt><dd>{sys.alert_delivery}</dd>
               <dt>Daily sync</dt><dd>{sys.daily_sync_time} {sys.timezone}</dd>
               <dt>Metrics every</dt><dd>{sys.metrics_interval_minutes} min</dd>
               <dt>Intraday cost</dt><dd>every {sys.intraday_cost_refresh_minutes} min</dd>
               <dt>Retention</dt><dd>{sys.metrics_retention_days} days of samples</dd>
-              <dt>Environment</dt><dd>{sys.app_env}</dd>
+              <dt>Deployment</dt><dd>{sys.app_env}</dd>
             </dl>
           )}
         </Card>

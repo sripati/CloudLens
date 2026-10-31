@@ -71,7 +71,7 @@ def get_filters(
     end: Optional[date] = Query(None, description="End date (inclusive), YYYY-MM-DD; default today; not in the future"),
     days: int = Query(30, ge=1, le=MAX_RANGE_DAYS, description="Used only when start is not given: range of N days ending at end"),
     provider: Optional[str] = Query(None, description="Comma separated: aws,azure,gcp"),
-    environment: Optional[str] = Query(None, description="production,staging,development,unassigned"),
+    environment: Optional[str] = Query(None, description="production,staging,development,unassigned (cost with no environment; not offered in the UI filter)"),
     resource_type: Optional[str] = Query(None, description="compute,containers,database,storage,networking,other"),
     service: Optional[str] = Query(None),
     region: Optional[str] = Query(None),

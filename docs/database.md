@@ -104,6 +104,7 @@ erDiagram
         string provider
         string job
         string data_source
+        string environment
         string status
         int cost_records
         int resources
@@ -112,6 +113,24 @@ erDiagram
         text error
         timestamptz started_at
         timestamptz finished_at
+    }
+    cloud_accounts {
+        string provider PK
+        string mode "mock | live"
+        timestamptz updated_at
+    }
+    cloud_connections {
+        string provider PK
+        string environment PK "production | staging | development"
+        json config "non-secret fields"
+        text secrets_encrypted "Fernet token"
+        string tested_hash
+        string verified_hash
+        string account
+        bool last_test_ok
+        timestamptz last_test_at
+        text last_test_message
+        timestamptz updated_at
     }
     app_settings {
         string key PK

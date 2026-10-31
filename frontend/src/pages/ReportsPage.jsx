@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { api } from '../api/client';
-import DateRangePicker from '../components/DateRangePicker';
+import FilterBar from '../components/FilterBar';
 import Icon from '../components/Icon';
 import PageHeader from '../components/PageHeader';
 import DonutChart from '../components/charts/DonutChart';
@@ -9,21 +9,9 @@ import { Card, Empty, ErrorBox, Progress, Skeleton, Toast, pctColor } from '../c
 import { BarList, ProviderLegendRows } from '../components/widgets';
 import { usePrefs } from '../context/PrefsContext';
 import { useApi } from '../hooks/useApi';
-import { ACTION_LABEL, ENV_LABEL, PROVIDER_LABEL, SERIES_COLORS } from '../utils/constants';
-import { REPORT_PRESETS, fmtRange, resolveRange } from '../utils/dates';
+import { ACTION_LABEL, ENV_LABEL, PROVIDER_LABEL, SERIES_COLORS, scopeLabel } from '../utils/constants';
+import { fmtRange } from '../utils/dates';
 import { longDate, pct, signedPct } from '../utils/format';
-
-const STORE_KEY = 'cloudlens.reportRange';
-const DEFAULT_REPORT_RANGE = { preset: 'this_month', start: '', end: '' };
-
-function loadRange() {
-  try {
-    const v = JSON.parse(sessionStorage.getItem(STORE_KEY) || 'null');
-    return v && typeof v === 'object' && v.preset ? v : DEFAULT_REPORT_RANGE;
-  } catch {
-    return DEFAULT_REPORT_RANGE;
-  }
-}
 
 function monthNote(m) {
   if (m.days_covered === m.days_in_month) return 'Month in progress (includes today)';
@@ -31,27 +19,16 @@ function monthNote(m) {
 }
 
 export default function ReportsPage() {
-  const { fmt, fmtCompact, bounds, boundsReady } = usePrefs();
-  const [rangeValue, setRangeValue] = useState(loadRange);
+  const { fmt, fmtCompact, boundsReady, filters, range, filterQuery } = usePrefs();
   const [toast, setToast] = useState('');
-  const range = resolveRange(rangeValue, bounds);
-  const query = { start: range.start, end: range.end };
-  const { data, error, reload } = useApi('/reports/summary', query, { enabled: boundsReady });
+  const { data, error, reload } = useApi('/reports/summary', filterQuery, { enabled: boundsReady });
   const envColors = Object.fromEntries(['production', 'staging', 'development', 'unassigned'].map((k, i) => [k, SERIES_COLORS[i]]));
   const title = range.preset === 'custom' ? 'Custom range' : range.label;
-
-  function changeRange(v) {
-    setRangeValue(v);
-    try {
-      sessionStorage.setItem(STORE_KEY, JSON.stringify(v));
-    } catch {
-      /* ignore */
-    }
-  }
+  const budgetName = data && data.budget_scope !== 'all' ? `${PROVIDER_LABEL[data.budget_scope] || data.budget_scope} budget` : 'budget';
 
   async function download() {
     try {
-      await api.download('/reports/summary.csv', query, `cloudlens_report_${range.start}_to_${range.end}.csv`);
+      await api.download('/reports/summary.csv', filterQuery, `cloudlens_report_${range.start}_to_${range.end}.csv`);
     } catch (e) {
       setToast(e.message);
     }
@@ -62,16 +39,16 @@ export default function ReportsPage() {
 
   return (
     <>
-      <PageHeader title="Reports" subtitle="Cost summary for any period: pick a range, review it, then download CSV or print to PDF">
-        <DateRangePicker value={rangeValue} resolved={range} bounds={bounds} onChange={changeRange} presets={REPORT_PRESETS} align="right" label="Report period" />
+      <PageHeader title="Reports" subtitle="Cost summary for the selected filters: review it, then download CSV or print to PDF">
         <button type="button" className="btn" onClick={download} disabled={!data}><Icon name="download" size={16} /> Download CSV</button>
         <button type="button" className="btn" onClick={() => window.print()} disabled={!data}><Icon name="reports" size={16} /> Print / PDF</button>
       </PageHeader>
+      <FilterBar />
       <ErrorBox error={error} onRetry={reload} />
       {!data ? <Skeleton height={420} /> : (
         <>
           <p className="sub" style={{ margin: 0 }}>
-            <b style={{ color: 'var(--text)' }}>{title}</b> · {fmtRange(data.period.start, data.period.end)} · {data.period.days} days · compared with {fmtRange(data.previous_period.start, data.previous_period.end)}
+            <b style={{ color: 'var(--text)' }}>{title}</b> · {scopeLabel(filters)} · {fmtRange(data.period.start, data.period.end)} · {data.period.days} days · compared with {fmtRange(data.previous_period.start, data.previous_period.end)}
           </p>
           <section className="grid-kpi">
             <div className="card"><div className="label">Total · {data.period.days} days</div><div className="num">{fmtCompact(data.total)}</div><div className="tiny">{fmt(data.daily_average)} per day on average</div></div>
@@ -79,7 +56,7 @@ export default function ReportsPage() {
               <div className="tiny" style={{ color: data.change_pct === null ? 'var(--muted)' : data.change_pct > 0 ? 'var(--warn)' : 'var(--ok)' }}>{signedPct(data.change_pct)} vs {fmtRange(data.previous_period.start, data.previous_period.end)}</div>
               {!data.previous_period.complete && <div className="tiny" style={{ marginTop: 4 }}>Data starts {longDate(data.previous_period.data_from)}, so the previous period is incomplete</div>}</div>
             <div className="card"><div className="label">Budget used</div><div className="num">{pct(data.budget_used_pct, 0)}</div><Progress value={data.budget_used_pct} color={pctColor(data.budget_used_pct)} />
-              <div className="tiny" style={{ marginTop: 8 }}>of {fmtCompact(data.budget)} budget for these days ({fmtCompact(data.monthly_budget)}/month)</div></div>
+              <div className="tiny" style={{ marginTop: 8 }}>of {fmtCompact(data.budget)} {budgetName} for these days ({fmtCompact(data.monthly_budget)}/month){!data.budget_applies_to_filtered_view && `. This budget covers all of ${data.budget_scope === 'all' ? 'the clouds' : PROVIDER_LABEL[data.budget_scope] || data.budget_scope}, not only this filter`}</div></div>
             <div className="card"><div className="label">Potential savings</div><div className="num" style={{ color: 'var(--ok)' }}>{fmtCompact(data.potential_savings)}</div><div className="tiny">per month if recommendations are applied</div></div>
           </section>
 
@@ -120,7 +97,7 @@ export default function ReportsPage() {
           <div className="row-wrap">
             <Card className="flex-2" title="Top services" subtitle="Change compared with the previous period of the same length">
               <div className="table-wrap">
-                <table className="data">
+                <table className="data" style={{ minWidth: 520 }}>
                   <thead><tr><th>Service</th><th className="r">Cost</th><th className="r">Share</th><th className="r">vs previous</th></tr></thead>
                   <tbody>{data.top_services.map((s) => (
                     <tr key={s.key}><td>{s.key}</td><td className="r mono" style={{ fontWeight: 600 }}>{fmt(s.cost)}</td><td className="r mono">{pct(s.pct)}</td><td className="r mono" style={{ color: (s.change_pct || 0) > 0 ? 'var(--warn)' : 'var(--ok)' }}>{signedPct(s.change_pct)}</td></tr>

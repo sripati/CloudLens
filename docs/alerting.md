@@ -58,7 +58,9 @@ sync and stale alerts while the backend is down.
 ## 4. Alertmanager config
 
 `monitoring/alertmanager/alertmanager.tmpl.yml` is a template. At container start, `sed` replaces
-`__WEBHOOK_TOKEN__` and `__SLACK_WEBHOOK_URL__` with values from `.env`, so no secret is committed.
+`__WEBHOOK_TOKEN__` with its value from `.env`, so no secret is committed. The direct Slack route reads its URL from
+`/shared/slack_webhook_url` (`api_url_file`) each time it sends. The backend writes that file at startup and whenever the URL is saved in
+Settings, on a volume shared by the two containers.
 Clustering is disabled (`--cluster.listen-address=`) because it is a single instance.
 
 ## 5. Message formats
