@@ -4,14 +4,16 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_filters
+from app.api.deps import MAX_RANGE_DAYS, get_current_user, get_filters
+from app.core.config import get_settings
 from app.core.database import get_db
 from app.models import CostRecord, User
 from app.services import analytics
 from app.services.analytics import DIMENSIONS, Filters, _cost_where
+from app.services.ingestion import local_today
 
 router = APIRouter(prefix="/costs", tags=["costs"])
 
@@ -37,8 +39,28 @@ def breakdown(dimension: str = Query("service"), limit: int = Query(50, le=200),
 
 
 @router.get("/monthly")
-def monthly(months: int = Query(6, ge=2, le=24), group_by: Optional[str] = Query("provider"), f: Filters = Depends(get_filters), db: Session = Depends(get_db), _: User = Depends(get_current_user)):
+def monthly(
+    months: Optional[int] = Query(None, ge=1, le=24, description="Optional: last N months ending at `end`. Default: the months inside start..end"),
+    group_by: Optional[str] = Query("provider"),
+    f: Filters = Depends(get_filters),
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
     return analytics.monthly(db, f, months, _dim(group_by))
+
+
+@router.get("/date-bounds")
+def date_bounds(db: Session = Depends(get_db), _: User = Depends(get_current_user)):
+    """Dates the date-range picker may offer: data from `min_date`, never after `today` (server timezone)."""
+    today = local_today()
+    lo, hi = db.execute(select(func.min(CostRecord.usage_date), func.max(CostRecord.usage_date))).one()
+    return {
+        "today": today.isoformat(),
+        "min_date": (lo or today).isoformat(),
+        "max_date": min(hi or today, today).isoformat(),
+        "max_range_days": MAX_RANGE_DAYS,
+        "timezone": get_settings().TIMEZONE,
+    }
 
 
 @router.get("/anomalies")

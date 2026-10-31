@@ -1,14 +1,12 @@
 import { usePrefs } from '../context/PrefsContext';
-import { ENVIRONMENTS, PROVIDERS, RANGES, RESOURCE_TYPES } from '../utils/constants';
+import { ENVIRONMENTS, PROVIDERS, RESOURCE_TYPES } from '../utils/constants';
+import { DASHBOARD_PRESETS } from '../utils/dates';
+import DateRangePicker from './DateRangePicker';
 import { Segmented } from './ui';
 
-/**
- * Shared filter bar (provider, environment, resource type, date range).
- * `custom` enables an explicit start/end date picker (Cost Explorer, Reports).
- */
-export default function FilterBar({ custom = false, ranges = RANGES.slice(0, 3) }) {
-  const { filters, setFilters, resetFilters } = usePrefs();
-  const usingCustom = Boolean(filters.start && filters.end);
+/** Shared filter bar (provider, environment, resource type, date range) for Dashboard, Cost Explorer, Resources. */
+export default function FilterBar({ presets = DASHBOARD_PRESETS }) {
+  const { filters, setFilters, resetFilters, range, bounds, setRange } = usePrefs();
   return (
     <section className="filter-bar" aria-label="Filters">
       <div className="field">
@@ -40,25 +38,8 @@ export default function FilterBar({ custom = false, ranges = RANGES.slice(0, 3) 
       </div>
       <div className="field">
         <span className="label">Date range</span>
-        <Segmented
-          label="Date range"
-          value={usingCustom ? 'custom' : filters.days}
-          onChange={(v) => (v === 'custom' ? setFilters({ start: filters.start || '', end: filters.end || '' , custom: true }) : setFilters({ days: v, start: '', end: '', custom: false }))}
-          options={[...ranges, ...(custom ? [{ value: 'custom', label: 'Custom' }] : [])]}
-        />
+        <DateRangePicker value={filters.range} resolved={range} bounds={bounds} onChange={setRange} presets={presets} />
       </div>
-      {custom && (usingCustom || filters.custom) && (
-        <>
-          <div className="field">
-            <label className="label" htmlFor="f-start">From</label>
-            <input id="f-start" type="date" className="input" value={filters.start} max={filters.end || undefined} onChange={(e) => setFilters({ start: e.target.value })} />
-          </div>
-          <div className="field">
-            <label className="label" htmlFor="f-end">To</label>
-            <input id="f-end" type="date" className="input" value={filters.end} min={filters.start || undefined} onChange={(e) => setFilters({ end: e.target.value })} />
-          </div>
-        </>
-      )}
       <div className="reset">
         <button type="button" className="btn link" onClick={resetFilters}>Reset filters</button>
       </div>

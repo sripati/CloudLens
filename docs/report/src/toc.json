@@ -110,93 +110,98 @@
   "page": 10
  },
  {
-  "title": "6.4 Historical analysis (Sprint 4)",
+  "title": "6.4 Date range selection and validation",
   "level": 2,
   "page": 11
  },
  {
-  "title": "6.5 Resources and drill-down",
+  "title": "6.5 Historical analysis (Sprint 4)",
   "level": 2,
   "page": 12
  },
  {
-  "title": "6.6 Authentication and roles",
+  "title": "6.6 Resources and drill-down",
   "level": 2,
   "page": 13
  },
  {
-  "title": "6.7 Currency and theme",
+  "title": "6.7 Authentication and roles",
   "level": 2,
-  "page": 13
+  "page": 14
+ },
+ {
+  "title": "6.8 Currency and theme",
+  "level": 2,
+  "page": 14
  },
  {
   "title": "7. Alerting and Notifications (Sprint 5)",
   "level": 1,
-  "page": 14
+  "page": 15
  },
  {
   "title": "8. Cost Optimisation",
   "level": 1,
-  "page": 16
+  "page": 17
  },
  {
   "title": "8.1 Savings for the monitored clouds",
   "level": 2,
-  "page": 16
+  "page": 17
  },
  {
   "title": "8.2 Keeping the platform itself cheap",
   "level": 2,
-  "page": 16
+  "page": 17
  },
  {
   "title": "9. Testing",
   "level": 1,
-  "page": 17
+  "page": 18
  },
  {
   "title": "10. Deployment",
   "level": 1,
-  "page": 18
+  "page": 19
  },
  {
   "title": "11. Results",
   "level": 1,
-  "page": 19
+  "page": 20
  },
  {
   "title": "12. Conclusion and Future Scope",
   "level": 1,
-  "page": 25
+  "page": 26
  },
  {
   "title": "12.1 Conclusion",
   "level": 2,
-  "page": 25
+  "page": 26
  },
  {
   "title": "12.2 Learnings",
   "level": 2,
-  "page": 25
+  "page": 26
  },
  {
   "title": "12.3 Future scope",
   "level": 2,
-  "page": 25
+  "page": 26
  },
  {
   "title": "References",
   "level": 1,
-  "page": 26
+  "page": 27
  },
  {
   "title": "Appendix A: Repository and Documentation Map",
   "level": 1,
-  "page": 27
+  "page": 28
  },
  {
   "title": "Appendix B: Key Configuration",
   "level": 1,
-  "page": 28
+  "page": 29
  }
 ]

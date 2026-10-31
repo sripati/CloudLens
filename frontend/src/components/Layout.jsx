@@ -20,14 +20,17 @@ const NAV = [
 
 export default function Layout() {
   const { isAdmin } = useAuth();
-  const { refreshSettings } = usePrefs();
+  const { refreshSettings, refreshBounds } = usePrefs();
   const { data: status } = useApi('/sync/status', null, { refreshMs: 60000 });
   const { data: rules } = useApi('/alerts/rules', null, { refreshMs: 60000 });
   const firing = (rules || []).filter((r) => r.enabled && r.state === 'firing').length;
 
   useEffect(() => {
     refreshSettings();
-  }, [refreshSettings]);
+    refreshBounds();
+    const id = setInterval(refreshBounds, 15 * 60 * 1000); // keeps "today" correct after midnight
+    return () => clearInterval(id);
+  }, [refreshSettings, refreshBounds]);
 
   return (
     <div className="shell">

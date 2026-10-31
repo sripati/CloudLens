@@ -25,7 +25,7 @@ Screen-level docs are in [../screens/](../screens/).
 ## Request lifecycle (example: Dashboard load)
 
 ```
-Browser ──GET /api/v1/dashboard/overview?days=30&provider=aws──► nginx (frontend container)
+Browser ──GET /api/v1/dashboard/overview?start=2026-10-02&end=2026-10-31&provider=aws──► nginx (frontend container)
   └─► backend: deps.get_current_user (JWT) → deps.get_filters (validate) → routes/dashboard.overview
         └─► analytics.summary / daily_series / breakdown / utilization / resources / anomalies
               └─► SQLAlchemy → PostgreSQL (GROUP BY on indexed columns)

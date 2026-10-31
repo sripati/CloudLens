@@ -6,9 +6,10 @@ import PageHeader from '../components/PageHeader';
 import CostTrendChart, { TrendLegend } from '../components/charts/CostTrendChart';
 import MonthlyBarChart from '../components/charts/MonthlyBarChart';
 import { Card, Empty, ErrorBox, Segmented, Skeleton, Toast } from '../components/ui';
-import { filterParams, usePrefs } from '../context/PrefsContext';
+import { usePrefs } from '../context/PrefsContext';
 import { useApi } from '../hooks/useApi';
-import { ENV_LABEL, PROVIDER_LABEL, RANGES, TYPE_LABEL } from '../utils/constants';
+import { ENV_LABEL, PROVIDER_LABEL, TYPE_LABEL } from '../utils/constants';
+import { fmtRange } from '../utils/dates';
 import { longDate, pct, signedPct } from '../utils/format';
 
 const GROUPS = [
@@ -28,16 +29,15 @@ const DIMS = [
 const LABELS = { ...PROVIDER_LABEL, ...ENV_LABEL, ...TYPE_LABEL };
 
 export default function CostExplorerPage() {
-  const { filters, fmt, fmtCompact } = usePrefs();
-  const params = filterParams(filters);
+  const { fmt, fmtCompact, filterQuery: params, boundsReady, range } = usePrefs();
   const [groupBy, setGroupBy] = useState('provider');
   const [dim, setDim] = useState('service');
-  const [months, setMonths] = useState(6);
   const [toast, setToast] = useState('');
-  const daily = useApi('/costs/daily', { ...params, group_by: groupBy });
-  const monthly = useApi('/costs/monthly', { ...params, months, group_by: 'provider' });
-  const breakdown = useApi('/costs/breakdown', { ...params, dimension: dim, limit: 25 });
-  const anomalies = useApi('/costs/anomalies', params);
+  const opts = { enabled: boundsReady };
+  const daily = useApi('/costs/daily', { ...params, group_by: groupBy }, opts);
+  const monthly = useApi('/costs/monthly', { ...params, group_by: 'provider' }, opts);
+  const breakdown = useApi('/costs/breakdown', { ...params, dimension: dim, limit: 25 }, opts);
+  const anomalies = useApi('/costs/anomalies', params, opts);
 
   const points = daily.data?.points || [];
   const keys = groupBy === 'none' ? [] : daily.data?.keys || [];
@@ -46,7 +46,7 @@ export default function CostExplorerPage() {
 
   async function exportCsv() {
     try {
-      await api.download('/costs/export', params, `cloudlens_costs_${points[0]?.date}_${points.at(-1)?.date}.csv`);
+      await api.download('/costs/export', params, `cloudlens_costs_${range.start}_${range.end}.csv`);
     } catch (e) {
       setToast(e.message);
     }
@@ -59,11 +59,11 @@ export default function CostExplorerPage() {
           <Icon name="download" size={16} /> Export CSV
         </button>
       </PageHeader>
-      <FilterBar custom ranges={RANGES} />
+      <FilterBar />
       <ErrorBox error={daily.error || monthly.error || breakdown.error} onRetry={daily.reload} />
 
       <section className="grid-kpi" aria-label="Period metrics">
-        <div className="card"><div className="label">Total in range</div><div className="num">{fmtCompact(total)}</div><div className="tiny">{points.length} days</div></div>
+        <div className="card"><div className="label">Total in range</div><div className="num">{fmtCompact(total)}</div><div className="tiny">{fmtRange(range.start, range.end)} · {range.days} days</div></div>
         <div className="card"><div className="label">Daily average</div><div className="num">{fmtCompact(points.length ? total / points.length : 0)}</div><div className="tiny">7-day moving average shown in chart</div></div>
         <div className="card"><div className="label">Peak day</div><div className="num">{peak ? fmtCompact(peak.total) : '–'}</div><div className="tiny">{peak ? longDate(peak.date) : ''}</div></div>
         <div className="card"><div className="label">Anomalies detected</div><div className="num">{anomalies.data ? anomalies.data.length : '–'}</div><div className="tiny">Days &gt;40% above 7-day baseline</div></div>
@@ -78,24 +78,24 @@ export default function CostExplorerPage() {
       </Card>
 
       <div className="row-wrap">
-        <Card className="flex-2" title="Monthly cost by provider" subtitle="Current month is partial; month-over-month compares full months"
-          actions={<Segmented label="Months" value={months} onChange={setMonths} options={[{ value: 3, label: '3M' }, { value: 6, label: '6M' }, { value: 12, label: '12M' }]} />}>
+        <Card className="flex-2" title="Monthly cost by provider" subtitle={`Calendar months in ${fmtRange(range.start, range.end)} · change the range with the date picker`}>
           {monthly.data ? <MonthlyBarChart months={monthly.data.months} keys={monthly.data.keys} /> : <Skeleton height={280} />}
         </Card>
-        <Card className="flex-1" title="Month-over-month" subtitle="Change vs previous month">
+        <Card className="flex-1" title="Month-over-month" subtitle="Full months compare totals; partial months compare the daily run rate">
           {monthly.data ? (
             <div className="table-wrap">
               <table className="data" style={{ minWidth: 0 }}>
                 <thead><tr><th>Month</th><th className="r">Total</th><th className="r">Change</th></tr></thead>
                 <tbody>
                   {[...monthly.data.months].reverse().map((m) => {
-                    const ch = m.partial ? m.run_rate_change_pct : m.change_pct;
+                    const ch = m.change_pct;
                     return (
                       <tr key={m.month}>
-                        <td>{m.label}{m.partial && <span className="tiny"> (to date)</span>}</td>
+                        <td>{m.label}{m.partial && <div className="tiny">{m.days_covered === m.days_in_month ? 'in progress' : `${m.days_covered} of ${m.days_in_month} days`}</div>}</td>
                         <td className="r mono">{fmtCompact(m.total)}</td>
-                        <td className="r mono" style={{ color: ch > 0 ? 'var(--warn)' : 'var(--ok)' }}>
-                          {ch === null || ch === undefined ? '–' : signedPct(ch)}{m.partial && ch !== undefined && ch !== null ? <span className="tiny"> run-rate</span> : null}
+                        <td className="r mono" style={{ color: ch === null || ch === undefined ? 'var(--muted)' : ch > 0 ? 'var(--warn)' : 'var(--ok)' }}>
+                          {ch === null || ch === undefined ? '–' : signedPct(ch)}
+                          {m.change_basis === 'run_rate' && <div className="tiny">run rate</div>}
                         </td>
                       </tr>
                     );

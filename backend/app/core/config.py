@@ -45,7 +45,7 @@ class Settings(BaseSettings):
     DATA_SOURCE: str = "mock"
     ENABLED_PROVIDERS: str = "aws,azure,gcp"
     ENV_TAG_KEY: str = "environment"  # tag/label key that holds production/staging/development
-    BACKFILL_DAYS: int = 180  # history loaded on first start
+    BACKFILL_DAYS: int = 365  # history loaded on first start (missing older days are added on restart)
     SYNC_LOOKBACK_DAYS: int = 3  # days re-fetched on each daily sync (providers restate recent costs)
 
     # ---- AWS -----------------------------------------------------------

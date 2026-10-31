@@ -2,7 +2,7 @@
 
 | File | Description |
 |---|---|
-| `CloudLens_Project_Report.docx` | Editable Word report (29 pages): abstract, introduction, gap analysis, requirements, architecture, design, implementation, alerting, cost optimisation, testing, deployment, results with screenshots, conclusion, references, appendices |
+| `CloudLens_Project_Report.docx` | Editable Word report (30 pages, including §6.4 Date range selection and validation): abstract, introduction, gap analysis, requirements, architecture, design, implementation, alerting, cost optimisation, testing, deployment, results with screenshots, conclusion, references, appendices |
 | `CloudLens_Project_Report.pdf` | The same report as PDF, ready to submit |
 | `img/` | Diagrams and cropped screenshots used in the report |
 | `src/` | Generator: `build_report.js` (content), `make_report.py` (builds Word + PDF with page-numbered contents), `diagrams.html` (architecture and alert-flow diagrams) |

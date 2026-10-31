@@ -14,11 +14,13 @@ src/
 │   └── PrefsContext.jsx     theme, currency, exchange rate, settings, shared filters, fmt helpers
 ├── hooks/useApi.js          GET with params, auto-refresh (refreshMs), keeps old data while loading
 ├── utils/format.js          money / compact (K, L, Cr) / pct / dates
+├── utils/dates.js           ISO-date math, presets (relative to today), resolveRange, validateRange
 ├── utils/constants.js       providers, environments, types, colours, labels
 ├── components/
 │   ├── Layout.jsx           sidebar nav (role-aware), cloud connection status, alert badge
 │   ├── PageHeader.jsx       title + currency toggle + theme toggle + user chip / sign out
-│   ├── FilterBar.jsx        provider · environment · type · date range (+ custom range)
+│   ├── FilterBar.jsx        provider · environment · type · DateRangePicker
+│   ├── DateRangePicker.jsx  calendar popover: presets, 2-month calendar, From/To inputs, validation, keyboard support
 │   ├── ui.jsx               Card, Segmented, Badge, StatusBadge, Progress, Modal, Toast, Skeleton, ErrorBox
 │   ├── widgets.jsx          KpiCard, BarList, ProviderLegendRows, UtilizationPanel, ResourceTable, AlertList
 │   ├── Icon.jsx             inline stroke icons
@@ -34,8 +36,31 @@ src/
 | JWT | `api/client.js` | localStorage `cloudlens.token` |
 | Theme | PrefsContext | localStorage `cloudlens.theme` (also applied before first paint in `index.html`) |
 | Currency | PrefsContext | localStorage `cloudlens.currency` |
-| Filters (provider, env, type, days, start/end) | PrefsContext | sessionStorage `cloudlens.filters`, shared by Dashboard, Cost Explorer and Resources |
+| Filters (provider, env, type, `range`) | PrefsContext | sessionStorage `cloudlens.filters`, shared by Dashboard, Cost Explorer, Resources and resource detail. `range` stores a preset key (`last_30_days`…) or `{preset:'custom', start, end}` |
+| Report period | ReportsPage | sessionStorage `cloudlens.reportRange` (default *This month*) |
+| Date bounds (`today`, `min_date`) | PrefsContext, from `GET /costs/date-bounds` | refreshed on load and every 15 min |
 | Server data | `useApi` per component | none |
+
+## Date range picker
+
+`components/DateRangePicker.jsx` + `utils/dates.js`.
+
+- **No hard-coded dates.** Presets (`PRESETS` in `dates.js`) are functions of *today*, and *today* comes from the server
+  (`/costs/date-bounds`, in `TIMEZONE`), so the browser's clock or timezone never shifts a range. A stored preset is
+  re-resolved on every render, so *Last 30 days* still means the last 30 days tomorrow.
+- **Validation** (`validateRange`, mirrors the backend's `validate_range`): both dates required and real; neither in the
+  future; start ≤ end; start not before the first date with data; at most `max_range_days` (731). Invalid typed input
+  shows a message (`role="alert"`) and disables *Apply*; future and no-data days are disabled in the calendar.
+- **Interaction:** presets apply in one click; a custom range is click-start, click-end (hover preview), then *Apply*.
+  Escape or clicking outside cancels. The popover measures the space and opens left, right or centred.
+- **Accessibility:** `role="dialog"`, grid of day buttons with full-date `aria-label`s (today, start, end, unavailable),
+  roving tab stop with arrow keys / Page Up / Page Down / Home / End.
+- Used by `FilterBar` (shared range), `ResourceDetailPage` (shared range) and `ReportsPage` (its own range,
+  `REPORT_PRESETS`). Pages wait for `boundsReady` before fetching, so they never request a range computed from a
+  wrong "today".
+
+To add a preset: add an entry to `PRESETS` (`label`, `range(today) → {start, end}`) and its key to `DASHBOARD_PRESETS`
+or `REPORT_PRESETS`; add a case to `utils/dates.test.js`.
 
 ## Theming
 

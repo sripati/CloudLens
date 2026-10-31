@@ -31,7 +31,14 @@ The filter bar appears on Dashboard, Cost Explorer and Resources, and the select
 - **Cloud provider:** All, AWS, Azure or GCP
 - **Environment:** production, staging, development, unassigned (untagged)
 - **Resource type:** compute, containers, database, storage, networking, other
-- **Date range:** 7, 30 or 90 days (Cost Explorer adds 180 days and a custom from/to range)
+- **Date range:** click the date button to open the calendar.
+  - **Quick ranges** on the left apply in one click: Last 7 / 30 / 90 days, This month, Last month, Last 3 / 6 / 12 months,
+    Year to date. Each shows the exact dates it covers and is always calculated from today.
+  - **Custom range:** click a start day, then an end day (hover previews the range), or type the dates in **From** / **To**,
+    then press **Apply**. Use the arrows to move between months; the keyboard works too (arrow keys, Page Up/Down, Enter).
+  - Days in the future and days before your data starts are greyed out. If a typed range is not valid, a red message explains
+    why (future date, start after end, longer than 731 days) and **Apply** stays disabled.
+  - The range is shared by Dashboard, Cost Explorer, Resources and the resource drill-down, and is remembered for the session.
 
 *Reset filters* returns to all providers and 30 days.
 
@@ -79,8 +86,16 @@ also sent. Repeats happen every 4 hours while a problem persists.
 someone is handling it.
 
 ## 7. Reports
-Pick a month to get its totals, comparison with the previous month, budget use, breakdowns, top services,
-anomalies and recommendations. **Download CSV** or **Print / PDF** to share it.
+1. Open **Reports** and choose the period with the date button: *This month*, *Last month*, *Last 3 / 6 / 12 months*,
+   *Year to date*, *Last 30 / 90 days*, or any custom range.
+2. The report shows the total and daily average, the previous period of the same length, budget use (the monthly budget
+   pro-rated to the days in the range), a **monthly breakdown** table and chart (cost per provider per month, budget %,
+   change vs the previous month), breakdowns by provider / environment / resource type, top services, anomalies and
+   recommendations.
+3. **Download CSV** saves the full report for that range (`cloudlens_report_<start>_to_<end>.csv`), including the
+   monthly breakdown. **Print / PDF** prints the page without the sidebar and toolbar.
+
+Example: for a six-month report choose **Last 6 months** (for example 1 May – 31 Oct 2026), then **Download CSV**.
 
 ## 8. Administration
 

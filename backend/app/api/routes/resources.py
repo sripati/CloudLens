@@ -35,8 +35,9 @@ def recommendations(f: Filters = Depends(get_filters), db: Session = Depends(get
 
 
 @router.get("/{resource_pk}")
-def detail(resource_pk: int, days: int = Query(30, ge=7, le=180), db: Session = Depends(get_db), _: User = Depends(get_current_user)):
-    data = analytics.resource_detail(db, resource_pk, days)
+def detail(resource_pk: int, f: Filters = Depends(get_filters), db: Session = Depends(get_db), _: User = Depends(get_current_user)):
+    """Drill-down for one resource; cost covers start..end (or the last `days` days)."""
+    data = analytics.resource_detail(db, resource_pk, f=f)
     if data is None:
         raise HTTPException(404, "Resource not found")
     return data

@@ -68,7 +68,7 @@ All settings are environment variables; `.env.example` documents every one. The 
 | `DATA_SOURCE` | `mock` | `mock` = generator, `live` = real cloud APIs |
 | `ENABLED_PROVIDERS` | `aws,azure,gcp` | Providers to sync |
 | `ENV_TAG_KEY` | `environment` | Tag/label holding the environment name |
-| `BACKFILL_DAYS` | `180` | History loaded on first start |
+| `BACKFILL_DAYS` | `365` | History loaded on first start; raising it later fetches the missing older days on the next restart |
 | `SYNC_LOOKBACK_DAYS` | `3` | Days re-fetched by the daily sync |
 | `METRICS_INTERVAL_MINUTES` | `5` | Utilization sampling interval |
 | `INTRADAY_COST_REFRESH_MINUTES` | `15` | Today's cost refresh. **Use 360+ in live mode.** |

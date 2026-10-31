@@ -10,8 +10,8 @@ Accepted by dashboard, costs, resources and recommendations endpoints:
 
 | Param | Example | Notes |
 |---|---|---|
-| `days` | `30` | Range ending today (default 30), ignored when `start` is given |
-| `start`, `end` | `2026-09-01`, `2026-09-30` | Inclusive, max 2 years |
+| `days` | `30` | Range of N days ending at `end` (default 30); used only when `start` is not given |
+| `start`, `end` | `2026-09-01`, `2026-09-30` | Inclusive. `end` defaults to today. Validated (422 with a readable message): neither date in the future, `start` ≤ `end`, at most **731 days** |
 | `provider` | `aws,gcp` | Comma separated; `all` or empty = no filter |
 | `environment` | `production` | production, staging, development, unassigned |
 | `resource_type` | `compute,database` | compute, containers, database, storage, networking, other |
@@ -49,7 +49,8 @@ Example `summary` fields: `period_total`, `previous_period_total`, `period_chang
 |---|---|---|
 | GET | `/costs/daily?group_by=provider` | Zero-filled daily points `{date, total, ma7, <key>...}`. `group_by`: provider, environment, resource_type, service, region, account, none |
 | GET | `/costs/breakdown?dimension=service` | Rows `{key, cost, pct, previous, change_pct}` vs the previous equal-length period |
-| GET | `/costs/monthly?months=6` | Monthly totals per provider with month-over-month change; current month flagged `partial` with `run_rate_change_pct` |
+| GET | `/costs/monthly?start=&end=` | One row per calendar month inside the range: totals per provider, `start`/`end`/`days_covered`, `partial` (month not fully covered, or still in progress), `change_pct` with `change_basis` = `total` (both months full) or `run_rate` (daily averages). Optional `months=N` = last N months ending at `end` |
+| GET | `/costs/date-bounds` | `{today, min_date, max_date, max_range_days, timezone}`: what the date-range picker may offer (server timezone) |
 | GET | `/costs/anomalies?threshold_pct=40` | Days where a provider exceeded its trailing 7-day average |
 | GET | `/costs/filters` | Distinct providers, environments, types, services, regions, accounts |
 | GET | `/costs/export` | CSV of normalized cost lines |
@@ -59,7 +60,7 @@ Example `summary` fields: `period_total`, `previous_period_total`, `period_chang
 | Method | Path | Description |
 |---|---|---|
 | GET | `/resources?search=&status=&sort=cost` | Inventory with cost, latest and 7-day CPU and memory, status (`healthy`, `idle`, `over_utilized`, `no_metrics`) |
-| GET | `/resources/{id}?days=30` | Drill-down: details, tags, daily cost, 7-day metrics, recommendations |
+| GET | `/resources/{id}?start=&end=` | Drill-down: details, tags, daily cost for the range (`period`), 7-day metrics, recommendations |
 | GET | `/resources/utilization?hours=168` | Per-provider averages and peaks, current snapshot, CPU trend, counts |
 | GET | `/resources/recommendations` | `{total_monthly_savings, items[]}` |
 
@@ -107,7 +108,9 @@ Rule body:
 |---|---|---|
 | GET | `/settings` | Budgets, exchange rate, channel, thresholds + read-only `system` block |
 | PUT 🔒 | `/settings` | Partial update |
-| GET | `/reports/monthly?month=YYYY-MM` | Monthly report (totals, breakdowns, top services/resources, anomalies, recommendations) |
+| GET | `/reports/summary?start=&end=` | Report for **any range** (e.g. last 6 months): total, daily average, previous period of equal length (`complete` = data exists for all of it), budget pro-rated to the days in the range, **monthly breakdown** (per provider, budget %, change), breakdowns, top services/resources, anomalies, recommendations |
+| GET | `/reports/summary.csv?start=&end=` | Same as CSV, file `cloudlens_report_<start>_to_<end>.csv` |
+| GET | `/reports/monthly?month=YYYY-MM` | Shortcut: the summary for one calendar month (a future month returns 422) |
 | GET | `/reports/monthly.csv?month=YYYY-MM` | Same as CSV |
 
 ## System

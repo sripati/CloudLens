@@ -12,11 +12,11 @@ Historical analysis (Sprint 4): trends, month-over-month changes and drill-down 
 
 | Section | Details |
 |---|---|
-| Filter bar | Adds **180D** and **Custom** (from/to date pickers) |
+| Filter bar | Same as Dashboard, including the **date-range calendar** (presets up to *Last 12 months* / *Year to date*, or any custom range up to 731 days) |
 | Period KPIs | Total in range, daily average, peak day, anomalies detected |
 | Daily cost | Group by **Provider / Environment / Resource type / Total**; total line + 7-day moving average (dashed) + anomaly markers |
-| Monthly cost by provider | Stacked bars for 3M / 6M / 12M |
-| Month-over-month table | Total per month and % change; the current month shows **run-rate** change (daily average vs last month) because it is partial |
+| Monthly cost by provider | Stacked bars, one per calendar month **inside the selected range** (choose *Last 6 months* to see six months) |
+| Month-over-month table | Total per month and % change; partial months (not fully inside the range, or still in progress) show the **run-rate** change, i.e. daily average vs the previous month, so a half month never looks like a drop |
 | Cost breakdown | By service, provider, environment, resource type, region or account; cost, share, previous period, change %. Top 15 rows |
 | Cost anomalies | Days > 40 % above the trailing 7-day average with cost vs baseline |
 | Export CSV | Normalized cost lines for the current filters |

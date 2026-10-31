@@ -32,16 +32,16 @@ real cloud credentials from the environment, and replaces the notifier with a re
 
 | Suite | Tests | Result |
 |---|---|---|
-| Backend on SQLite | 77 | **77 passed** |
-| Backend on PostgreSQL 16 | 77 | **77 passed** |
-| Backend with pinned `requirements*.txt` in a clean virtualenv | 77 | **77 passed** |
-| Frontend (vitest) | 9 | **9 passed** |
+| Backend on SQLite | 84 | **84 passed** |
+| Backend on PostgreSQL 16 | 84 | **84 passed** |
+| Backend with pinned `requirements*.txt` in a clean virtualenv | 84 | **84 passed** |
+| Frontend (vitest) | 31 | **31 passed** |
 | Frontend production build | — | success (no warnings) |
 | promtool check rules / config | 5 rules | SUCCESS |
 | amtool check-config | — | SUCCESS |
 | docker compose config | — | valid |
 
-Backend line coverage: **85 %** overall (analytics 96 %, alert engine 94 %, ingestion 83 %).
+Backend line coverage: **85 %** overall (analytics 97 %, alert engine 95 %, ingestion 83 %).
 The live connectors are about 47 % covered. Their parsing logic is fully tested, while the remaining lines are
 SDK calls that need real cloud accounts and are verified with **Cloud Accounts → Test connection**.
 
@@ -51,9 +51,22 @@ SDK calls that need real cloud accounts and are verified with **Cloud Accounts �
 |---|---|---|
 | `test_normalizer.py` | 30 | 16 service names across 3 clouds → type; 12 environment spellings; region; INR/GCP conversion |
 | `test_providers.py` | 10 | Mock determinism, partial today, anomaly cycles, overrides, metric bounds; AWS/Azure/GCP parsers; unconfigured live providers; AWS Stubber pagination |
-| `test_ingestion_analytics.py` | 13 | Backfill of 3 providers / 25 resources; re-sync idempotent; duplicate merge; skipped provider; **breakdowns sum to the total** for 4 dimensions; daily series = total; filters narrow; budget scope; MoM; injected anomaly detected; statuses and recommendations; utilization; drill-down |
+| `test_ingestion_analytics.py` | 15 | Backfill of 3 providers / 25 resources; re-sync idempotent; duplicate merge; skipped provider; **breakdowns sum to the total** for 4 dimensions; daily series = total; filters narrow; budget scope; MoM; injected anomaly detected; statuses and recommendations; utilization; drill-down |
 | `test_alerts.py` | 9 | Seeded rules; fire → resolve notifications; all 8 metric types compute; provider scope; Prometheus exposition; webhook dedupe and resolve; generic alerts; channels; payload formats |
-| `test_api.py` | 15 | Health/metrics; 401s; me; overview shape; 422 validation; costs, resources, reports endpoints; **RBAC 403 for viewer**; rule CRUD with live evaluation; test notification + ack; webhook token; settings round trip; user management guards; sync status and mock anomaly |
+| `test_api.py` | 20 | Health/metrics; 401s; me; overview shape; 422 validation; costs, resources, reports endpoints; **RBAC 403 for viewer**; rule CRUD with live evaluation; test notification + ack; webhook token; settings round trip; user management guards; sync status and mock anomaly |
+
+### Date-range tests (added with the calendar picker)
+
+| Where | What is checked |
+|---|---|
+| `test_api.py::test_future_dates_rejected` | Future `end` or `start` → 422 with a readable message on dashboard, costs, reports and resources; a future month for `/reports/monthly` → 422 |
+| `test_api.py::test_start_after_end_and_max_span` | start > end → 422; 732 days → 422; exactly 731 days and a single day are accepted |
+| `test_api.py::test_date_bounds` | `/costs/date-bounds` returns today, first data date and the 731-day limit |
+| `test_api.py::test_monthly_follows_selected_range` | Monthly view uses the selected range; partial first month; run-rate comparison; months sum to the period total |
+| `test_api.py::test_range_report_six_months` | Range report: monthly breakdown, pro-rated budget, totals match, CSV name and content |
+| `test_ingestion_analytics.py` | `month_spans` (partial / full / in progress), `extend_history` fills older days once |
+| `utils/dates.test.js` (14) | Presets computed from today and moving with it, clamping to data start, stored-range fallback, every validation message |
+| `DateRangePicker.test.jsx` (8) | Trigger label, one-click preset, click-start/click-end + Apply, restart when clicking before start, disabled future, typed-date errors, Escape cancels, keyboard navigation never enters the future |
 
 ## 4. End-to-end alert test (manual / demo)
 
@@ -75,7 +88,12 @@ SDK calls that need real cloud accounts and are verified with **Cloud Accounts �
 | UI-04 | Currency | Click *INR ₹* | Amounts in ₹ with K/L/Cr; footer shows the rate |
 | UI-05 | Provider filter | Select AWS | KPIs, trend (AWS line only), donut, tables limited to AWS; budget switches to the AWS budget |
 | UI-06 | Environment filter | Select Production | Totals drop; budget note says it applies to provider scope |
-| UI-07 | Custom range | Cost Explorer → Custom, pick dates | Charts and KPIs cover exactly that range |
+| UI-07 | Custom range | Date button → click a start day, click an end day → Apply | Charts, KPIs and subtitles cover exactly that range; button shows *Custom range* with dates and day count |
+| UI-07a | Preset range | Date button → *Last 6 months* | Applies in one click; range ends today and starts on the 1st of the month 5 months ago |
+| UI-07b | Future date | Type a To date after today | Red message *End date can’t be in the future*, Apply disabled; future days are disabled in the calendar |
+| UI-07c | Start after end | Type From later than To | Message *Start date must be on or before the end date*, Apply disabled |
+| UI-07d | Too long | Range over 731 days | Message with the day count, Apply disabled |
+| UI-07e | Six-month report | Reports → *Last 6 months* → Download CSV | Monthly breakdown for 6 months; CSV `cloudlens_report_<start>_to_<end>.csv` |
 | UI-08 | Drill-down | Click a resource row | Resource detail with cost bars, utilization lines, tags, recommendation |
 | UI-09 | Create rule | Alerts → New rule (GCP daily cost > 100) | Rule appears and is evaluated immediately (Firing) |
 | UI-10 | Test notification | Alerts → Send (Slack) | Event row with delivery *sent*; message in the mock inbox |

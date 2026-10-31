@@ -113,4 +113,5 @@ volumes `pgdata`, `promdata` and `amdata`.
 | RBAC | Sign in as viewer | No Cloud Accounts / Users menu; no *New rule* |
 | Sync | Cloud Accounts → Sync now | New success rows in Sync history |
 | Alert | Inject spike → wait 2 min | Message in Slack / Teams / mock inbox |
+| Date range | Date button → *Last 6 months*; then type a future *To* date | Data for six months; future date shows an error and Apply stays disabled |
 | Restart | `docker compose restart` | Data and rules preserved |

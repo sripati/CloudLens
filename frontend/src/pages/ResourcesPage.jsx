@@ -4,9 +4,10 @@ import PageHeader from '../components/PageHeader';
 import UtilizationChart from '../components/charts/UtilizationChart';
 import { Card, Empty, ErrorBox, Segmented, Skeleton } from '../components/ui';
 import { ResourceTable } from '../components/widgets';
-import { filterParams, usePrefs } from '../context/PrefsContext';
+import { usePrefs } from '../context/PrefsContext';
 import { useApi } from '../hooks/useApi';
 import { ACTION_LABEL, ENV_LABEL, PROVIDER_LABEL } from '../utils/constants';
+import { fmtRange } from '../utils/dates';
 
 const STATUSES = [
   { value: '', label: 'All' },
@@ -17,8 +18,7 @@ const STATUSES = [
 ];
 
 export default function ResourcesPage() {
-  const { filters, fmt, fmtCompact } = usePrefs();
-  const params = filterParams(filters);
+  const { fmt, fmtCompact, filterQuery: params, boundsReady, range } = usePrefs();
   const [search, setSearch] = useState('');
   const [q, setQ] = useState('');
   const [status, setStatus] = useState('');
@@ -28,9 +28,9 @@ export default function ResourcesPage() {
     const id = setTimeout(() => setQ(search), 300);
     return () => clearTimeout(id);
   }, [search]);
-  const list = useApi('/resources', { ...params, search: q, status, sort }, { refreshMs: 60000 });
-  const util = useApi('/resources/utilization', { ...params, hours }, { refreshMs: 60000 });
-  const recs = useApi('/resources/recommendations', params);
+  const list = useApi('/resources', { ...params, search: q, status, sort }, { refreshMs: 60000, enabled: boundsReady });
+  const util = useApi('/resources/utilization', { ...params, hours }, { refreshMs: 60000, enabled: boundsReady });
+  const recs = useApi('/resources/recommendations', params, { enabled: boundsReady });
   const counts = util.data?.counts;
   const keys = [...new Set((util.data?.trend || []).flatMap((p) => Object.keys(p).filter((k) => k !== 'ts')))];
 
@@ -61,7 +61,7 @@ export default function ResourcesPage() {
         {util.data ? (util.data.trend.length ? <UtilizationChart data={util.data.trend} keys={keys} /> : <Empty>No samples in this window.</Empty>) : <Skeleton height={260} />}
       </Card>
 
-      <Card title="Resource inventory" subtitle="Select a row to drill down into cost and utilization"
+      <Card title="Resource inventory" subtitle={`Cost for ${fmtRange(range.start, range.end)} · select a row to drill down`}
         actions={
           <div className="toolbar">
             <label className="sr-only" htmlFor="res-search">Search resources</label>

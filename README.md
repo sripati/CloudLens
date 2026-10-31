@@ -28,8 +28,10 @@ environment and resource type, and sends **alerts to Slack and Microsoft Teams**
 - **Real-time view.** Utilization is sampled every 5 minutes, today's running cost every 15 minutes, and the
   dashboard auto-refreshes every 60 seconds.
 - **Historical analysis.** Daily trends with a 7-day moving average, month-over-month changes,
-  breakdowns by any dimension, anomaly detection, and up to 180 days loaded on first start.
-- **Filters and drill-down.** Filter by provider, environment, resource type and date range (preset or custom).
+  breakdowns by any dimension, anomaly detection, and 365 days of history loaded on first start.
+- **Filters and drill-down.** Filter by provider, environment, resource type and date range. The date-range calendar offers
+  presets computed from today (last 7/30/90 days, this/last month, last 3/6/12 months, year to date) or any custom range,
+  with validation: no future dates, start on or before end, at most 731 days.
   Click any resource for its own cost and utilization history.
 - **Customizable alerting.** Eight metric types: daily cost, MTD cost, budget %, forecast %,
   anomaly %, CPU, memory and idle-resource count. Each rule can be scoped by provider, environment or type,
@@ -54,7 +56,8 @@ docker compose up -d --build
 | http://localhost:9090 | Prometheus (localhost only) |
 | http://localhost:9093 | Alertmanager (localhost only) |
 
-The first start loads 180 days of history (a few seconds in mock mode).
+The first start loads 365 days of history (a few seconds in mock mode). If you raise `BACKFILL_DAYS` later, the
+missing older days are fetched on the next restart.
 
 ## Local development (without Docker)
 
@@ -76,7 +79,7 @@ cd monitoring/mock-receiver && uvicorn app:app --port 9000
 ## Tests
 
 ```bash
-make test            # backend (pytest, 77 tests) + frontend (vitest)
+make test            # backend (pytest, 84 tests) + frontend (vitest, 31 tests)
 make test-backend-pg # same backend suite against PostgreSQL
 ```
 

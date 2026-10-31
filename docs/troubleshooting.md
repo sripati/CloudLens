@@ -22,6 +22,9 @@
 | Times look off by 5:30 h | Timezone | `TIMEZONE=Asia/Kolkata` controls day boundaries; the DB stores UTC |
 | Scheduled jobs run twice | More than one backend worker or replica | Keep `--workers 1` and one backend container |
 | Frontend build OOM on EC2 | 2 GB RAM | The user-data script adds 2 GB swap; or build the images locally and push them to a registry |
+| Date picker: *End date can’t be in the future* | The selected date is after today (server timezone `TIMEZONE`) | Pick today or earlier; presets always end today |
+| API returns 422 *Start date … must be on or before the end date* / *maximum is 731 days* | Reversed or over-long range in a URL or script | Swap the dates or shorten the range to 731 days or less |
+| Older months empty in the picker (greyed out) | History only goes back `BACKFILL_DAYS` | Set `BACKFILL_DAYS=365` (or more) in `.env` and restart the backend; older days are filled once on start-up |
 | INR amounts wrong | Exchange rate | Settings → Exchange rate (INR per USD) |
 
 ## Diagnostic commands

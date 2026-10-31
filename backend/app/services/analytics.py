@@ -224,16 +224,42 @@ def summary(db: Session, f: Filters) -> Dict[str, object]:
     }
 
 
-def monthly(db: Session, f: Filters, months: int = 6, group_by: Optional[str] = "provider") -> Dict[str, object]:
-    today = local_today()
-    first = today.replace(day=1)
-    starts = []
-    m = first
-    for _ in range(months):
-        starts.append(m)
-        m = (m - timedelta(days=1)).replace(day=1)
-    starts.reverse()
-    mf = f.shifted(starts[0], today)
+def month_spans(start: date, end: date, today: Optional[date] = None) -> List[Dict[str, object]]:
+    """Calendar months touched by [start, end] with the part of each month that is covered.
+
+    A month is `full` only when the range covers all its days and it has ended (a month that
+    contains today is still accruing cost, so it counts as partial).
+    """
+    today = today or local_today()
+    out = []
+    m = start.replace(day=1)
+    while m <= end:
+        days_in = calendar.monthrange(m.year, m.month)[1]
+        m_last = m.replace(day=days_in)
+        c_start, c_end = max(start, m), min(end, m_last)
+        out.append({
+            "first": m, "last": m_last, "start": c_start, "end": c_end, "days_in_month": days_in,
+            "days_covered": (c_end - c_start).days + 1, "full": c_start == m and c_end == m_last and m_last < today,
+        })
+        m = m_last + timedelta(days=1)
+    return out
+
+
+def monthly(db: Session, f: Filters, months: Optional[int] = None, group_by: Optional[str] = "provider") -> Dict[str, object]:
+    """Cost per calendar month for the selected range (or the last `months` months up to f.end).
+
+    Months only partly inside the range are flagged `partial`; their change vs the previous month is
+    computed on the daily average (run rate) instead of the total, so a half month never looks like a drop.
+    """
+    if months:
+        first = f.end.replace(day=1)
+        for _ in range(months - 1):
+            first = (first - timedelta(days=1)).replace(day=1)
+        start, end = first, f.end
+    else:
+        start, end = f.start, f.end
+    spans = month_spans(start, end)
+    mf = f.shifted(start, end)
     col = DIMENSIONS[group_by] if group_by else None
     if col is not None:
         rows = db.execute(select(CostRecord.usage_date, col, func.sum(CostRecord.cost_usd)).where(_cost_where(mf)).group_by(CostRecord.usage_date, col)).all()
@@ -245,28 +271,35 @@ def monthly(db: Session, f: Filters, months: int = 6, group_by: Optional[str] = 
         buckets[d.strftime("%Y-%m")][k] += float(v)
         keys.add(k)
     out = []
-    prev_total = None
-    for s in starts:
-        label = s.strftime("%Y-%m")
+    prev = None
+    for sp in spans:
+        label = sp["first"].strftime("%Y-%m")
         vals = buckets.get(label, {})
         total = sum(vals.values())
-        days_in = calendar.monthrange(s.year, s.month)[1]
-        is_current = s == first
-        out.append({
+        row = {
             "month": label,
-            "label": s.strftime("%b %Y"),
+            "label": sp["first"].strftime("%b %Y"),
+            "start": sp["start"].isoformat(),
+            "end": sp["end"].isoformat(),
             "total": round(total, 2),
-            "partial": is_current,
-            "days_covered": today.day if is_current else days_in,
-            "daily_average": round(total / (today.day if is_current else days_in), 2),
-            "change_pct": _pct(total, prev_total) if prev_total is not None and not is_current else None,
+            "partial": not sp["full"],
+            "days_covered": sp["days_covered"],
+            "days_in_month": sp["days_in_month"],
+            "daily_average": round(total / sp["days_covered"], 2),
+            "change_pct": None,
+            "change_basis": None,
             **{k: round(vals.get(k, 0.0), 2) for k in keys},
-        })
-        prev_total = total
-    # for the partial month compare run-rate (daily average) with the previous month
-    if len(out) >= 2:
+        }
+        if prev is not None:
+            if sp["full"] and not prev["partial"]:
+                row["change_pct"], row["change_basis"] = _pct(total, prev["total"]), "total"
+            else:
+                row["change_pct"], row["change_basis"] = _pct(row["daily_average"], prev["daily_average"]), "run_rate"
+        out.append(row)
+        prev = row
+    if len(out) >= 2:  # backward compatible field used by older clients
         out[-1]["run_rate_change_pct"] = _pct(out[-1]["daily_average"], out[-2]["daily_average"])
-    return {"group_by": group_by, "keys": sorted(keys), "months": out}
+    return {"group_by": group_by, "keys": sorted(keys), "start": start.isoformat(), "end": end.isoformat(), "months": out}
 
 
 # ---------------------------------------------------------------- utilization & resources
@@ -412,14 +445,19 @@ def utilization(db: Session, f: Filters, hours: int = 168) -> Dict[str, object]:
     }
 
 
-def resource_detail(db: Session, pk: int, days: int = 30) -> Optional[Dict[str, object]]:
+def resource_detail(db: Session, pk: int, days: int = 30, f: Optional[Filters] = None) -> Optional[Dict[str, object]]:
+    """Drill-down for one resource. Cost covers `f` (start..end) when given, else the last `days` days."""
     r = db.get(Resource, pk)
     if r is None:
         return None
     today = local_today()
-    f = Filters(today - timedelta(days=days - 1), today)
+    if f is None:
+        f = Filters(today - timedelta(days=days - 1), today)
+    days = f.days
     rows = db.execute(
-        select(CostRecord.usage_date, func.sum(CostRecord.cost_usd)).where(CostRecord.resource_id == r.resource_id, CostRecord.usage_date >= f.start).group_by(CostRecord.usage_date)
+        select(CostRecord.usage_date, func.sum(CostRecord.cost_usd)).where(
+            CostRecord.resource_id == r.resource_id, CostRecord.usage_date >= f.start, CostRecord.usage_date <= f.end
+        ).group_by(CostRecord.usage_date)
     ).all()
     cmap = {d: float(v) for d, v in rows}
     cost_series = [{"date": (f.start + timedelta(days=i)).isoformat(), "cost": round(cmap.get(f.start + timedelta(days=i), 0.0), 2)} for i in range(days)]
@@ -435,6 +473,7 @@ def resource_detail(db: Session, pk: int, days: int = 30) -> Optional[Dict[str, 
         "first_seen_at": r.first_seen_at.isoformat() if r.first_seen_at else None,
         "cost_series": cost_series,
         "cost_total": round(sum(cmap.values()), 2),
+        "period": {"start": f.start.isoformat(), "end": f.end.isoformat(), "days": days},
         "metrics": [
             {"ts": m.ts.isoformat(), "cpu": m.cpu_percent, "memory": m.memory_percent, "storage": m.storage_percent, "net_in": m.network_in_mb, "net_out": m.network_out_mb}
             for m in metrics

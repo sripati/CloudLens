@@ -54,7 +54,7 @@ CATALOG: Dict[str, List[MockAsset]] = {
         MockAsset("elasticache-sessions", "database", "Amazon ElastiCache", "production", "ap-south-1", "cache.r6g.large", 55, 35, 61),
         MockAsset("prod-nat-gateway", "networking", "Amazon Virtual Private Cloud", "production", "ap-south-1", "NAT Gateway", 65),
         MockAsset("s3-media-assets", "storage", "Amazon Simple Storage Service", "production", "ap-south-1", "S3 Standard", 95, storage=71),
-        MockAsset("s3-log-archive", "storage", "Amazon Simple Storage Service", "development", "ap-south-1", "S3 Standard", 52, storage=14),
+        MockAsset("s3-log-archive", "storage", "Amazon Simple Storage Service", "development", "ap-south-1", "S3 Standard", 52, storage=9),
         MockAsset("staging-ec2-app", "compute", "Amazon Elastic Compute Cloud - Compute", "staging", "ap-south-1", "t3.large x2", 48, 18, 34),
         MockAsset("dev-jenkins-ec2", "compute", "Amazon Elastic Compute Cloud - Compute", "development", "ap-south-1", "c5.2xlarge", 36, 6, 22, peak_amp=3),
         MockAsset("lambda-image-resize", "compute", "AWS Lambda", "production", "ap-south-1", "Lambda", 18),
@@ -219,7 +219,7 @@ class MockProvider(CloudProvider):
             mem = round(min(99.0, max(1.0, mem)), 2)
         if a.storage is not None:
             days = (local.date() - GROWTH_REFERENCE).days
-            stor = round(min(99.0, a.storage + 0.02 * days + 0.5 * (_rnd(a.name, "st", key) - 0.5)), 2)
+            stor = round(min(99.0, a.storage + 0.005 * days + 0.5 * (_rnd(a.name, "st", key) - 0.5)), 2)
         net_base = a.daily_usd / 10
         return MetricItem(
             provider=self.name,

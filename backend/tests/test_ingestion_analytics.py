@@ -128,3 +128,25 @@ def test_resource_detail(db):
     assert d["resource"]["name"] == "prod-eks-cluster-01"
     assert len(d["cost_series"]) == 30 and d["metrics"]
     assert analytics.resource_detail(db, 999999) is None
+
+
+def test_month_spans_partial_and_full():
+    from datetime import date
+
+    spans = analytics.month_spans(date(2026, 8, 15), date(2026, 10, 31), today=date(2026, 11, 5))
+    assert [(s["first"].month, s["days_covered"], s["full"]) for s in spans] == [(8, 17, False), (9, 30, True), (10, 31, True)]
+    # the month containing today is still accruing, so it is partial even when fully covered
+    assert analytics.month_spans(date(2026, 10, 1), date(2026, 10, 31), today=date(2026, 10, 31))[0]["full"] is False
+
+
+def test_extend_history_fills_older_gap(db, monkeypatch):
+    from app.core.config import get_settings
+    from app.services.ingestion import extend_history
+
+    earliest = db.scalar(select(func.min(CostRecord.usage_date)).where(CostRecord.provider == "aws"))
+    monkeypatch.setattr(get_settings(), "BACKFILL_DAYS", (local_today() - earliest).days + 5)
+    runs = extend_history(db)
+    assert {r.provider for r in runs} == {"aws", "azure", "gcp"} and all(r.status == "success" for r in runs)
+    new_earliest = db.scalar(select(func.min(CostRecord.usage_date)).where(CostRecord.provider == "aws"))
+    assert new_earliest < earliest
+    assert extend_history(db) == []  # nothing left to fill

@@ -22,10 +22,11 @@ scope for comparison periods.
 | `month_to_date(db, f)` | `mtd`, `forecast`, `avg_daily_7d`, last-month comparisons | Summary, alert engine |
 | `budget_info` | budget for the provider scope, `used_pct`, `forecast_pct`, `applies_to_filtered_view` | Summary |
 | `summary(db, f)` | KPI bundle | `/dashboard/summary` |
-| `monthly(db, f, months, group_by)` | monthly totals per key, MoM %, partial-month run-rate change | Cost Explorer |
+| `month_spans(start, end)` | calendar months touched by a range, with covered days and `full` flag | monthly, reports |
+| `monthly(db, f, months=None, group_by)` | one row per calendar month inside `f` (or the last `months` months): totals per key, `partial`, `change_pct` + `change_basis` (`total` / `run_rate`) | Cost Explorer, Reports |
 | `resources(db, f, search, status, sort)` | inventory with period cost, latest and 7-day metrics, status | Resources, Dashboard |
 | `utilization(db, f, hours)` | per-provider averages, peaks and current snapshot; bucketed CPU trend; counts; healthy rate | Dashboard, Resources |
-| `resource_detail(db, pk, days)` | single resource: cost series, metrics, recommendations | Resource detail |
+| `resource_detail(db, pk, days, f)` | single resource: cost series for `f` (or last `days`), metrics, recommendations | Resource detail |
 | `anomalies(db, f, threshold_pct)` | days where provider cost > trailing 7-day average + threshold (today excluded) | Dashboard, Cost Explorer, Reports |
 | `recommendations(db, f)` | optimization actions with monthly savings | Resources, Reports, Summary |
 

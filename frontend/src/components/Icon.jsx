@@ -22,6 +22,7 @@ const PATHS = {
   zap: 'M13 2L3 14h9l-1 8 10-12h-9z',
   send: 'M22 2L11 13M22 2l-7 20-4-9-9-4z',
   savings: 'M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6',
+  warning: 'M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01',
 };
 
 export default function Icon({ name, size = 18, strokeWidth = 1.8, label }) {

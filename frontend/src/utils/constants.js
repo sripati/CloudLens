@@ -26,12 +26,6 @@ export const TYPE_LABEL = Object.fromEntries(RESOURCE_TYPES.map((t) => [t.value,
 
 export const STATUS_LABEL = { healthy: 'Healthy', idle: 'Idle', over_utilized: 'Over-utilized', no_metrics: 'No metrics' };
 
-export const RANGES = [
-  { value: 7, label: '7D' },
-  { value: 30, label: '30D' },
-  { value: 90, label: '90D' },
-  { value: 180, label: '180D' },
-];
 
 // Colors for non-provider series (environment / type / service breakdowns).
 // Ordered so neighbours differ in lightness, not only hue.

@@ -13,7 +13,7 @@
 
 | Job | Cost window | Metrics window | Used by |
 |---|---|---|---|
-| `backfill` | today − `BACKFILL_DAYS` … today | 7 days hourly | First start (`backfill_if_empty`) |
+| `backfill` | today − `BACKFILL_DAYS` … today | 7 days hourly | First start (`backfill_if_empty`); on later starts `extend_history` fetches only the older days missing after `BACKFILL_DAYS` was raised |
 | `daily` | today − `SYNC_LOOKBACK_DAYS` … today | 26 h hourly | Scheduler 02:00 |
 | `intraday` | today only | none | Scheduler, every `INTRADAY_COST_REFRESH_MINUTES` |
 | `metrics` | none | last 2 × interval at `METRICS_INTERVAL_MINUTES` step | Scheduler, every 5 min |

@@ -1,6 +1,6 @@
 # Screen: Resource Detail (drill-down)
 
-**Route:** `/resources/:id` · **File:** `frontend/src/pages/ResourceDetailPage.jsx` · **API:** `GET /resources/{id}?days=30` (60 s refresh)
+**Route:** `/resources/:id` · **File:** `frontend/src/pages/ResourceDetailPage.jsx` · **API:** `GET /resources/{id}?start=&end=` (60 s refresh)
 
 ![Resource detail](../screenshots/04_resource_detail_dark.png)
 
@@ -8,8 +8,9 @@
 Answer "why does this resource cost what it does, and is it sized right?"
 
 ## Sections
-- **KPIs:** cost in the last 30 days (and per day), CPU now (7-day average and peak), memory now, status with last sample time.
-- **Daily cost:** bar chart for 30 days. Spikes here match anomalies on the dashboard.
+- **Date range** (header): the same shared calendar as the Dashboard; changing it here also changes the other screens.
+- **KPIs:** cost for the selected range (and per day), CPU now (7-day average and peak), memory now, status with last sample time.
+- **Daily cost:** bar chart for every day of the selected range. Spikes here match anomalies on the dashboard.
 - **Details:** resource ID / ARN / URI, account, service, SKU, state, first seen, and all tags.
 - **Utilization · 7 days:** CPU, memory and storage lines with the 80 % threshold.
 - **Recommendations:** the action and estimated monthly savings for this resource, if any.

@@ -39,7 +39,7 @@ and goal from the six sprints is implemented, so it can be checked during evalua
 |---|---|
 | Backend trend logic (monthly change, utilization rates) | `analytics.monthly` (MoM, run-rate), `daily_series` (7-day MA), `utilization` (healthy rate, hourly trend), `anomalies` |
 | Line charts, bar graphs | `CostTrendChart`, `MonthlyBarChart`, `UtilizationChart`, `DonutChart`, `BarList` |
-| Advanced filters (date range, type, provider) | Cost Explorer: custom from/to dates, group-by, breakdown by 6 dimensions, 3/6/12-month view |
+| Advanced filters (date range, type, provider) | `DateRangePicker`: calendar with presets computed from today and validated custom ranges; Cost Explorer group-by, breakdown by 6 dimensions, monthly view of the selected range; Reports for any range |
 | Validate calculations | Analytics tests; Reports screen cross-checks |
 | **Goal:** trends over time | Cost Explorer + Reports (monthly, CSV export) |
 
@@ -57,7 +57,7 @@ and goal from the six sprints is implemented, so it can be checked during evalua
 
 | Task | Delivered in |
 |---|---|
-| Extensive testing | 77 backend tests (SQLite + PostgreSQL), 9 frontend tests, E2E alert pipeline, UI screenshots; [testing.md](testing.md) |
+| Extensive testing | 84 backend tests (SQLite + PostgreSQL), 31 frontend tests, E2E alert pipeline, UI screenshots; [testing.md](testing.md) |
 | User documentation (setup, usage, troubleshooting) | [setup-guide.md](setup-guide.md), [user-guide.md](user-guide.md), [troubleshooting.md](troubleshooting.md), `docs/modules/*`, `docs/screens/*` |
 | Containerize with Docker | `backend/Dockerfile`, `frontend/Dockerfile`, `monitoring/mock-receiver/Dockerfile`, `docker-compose.yml` |
 | Deploy to staging | `deploy/aws/create-ec2.sh`, `ec2-user-data.sh`, `deploy.sh`; [deployment-ec2.md](deployment-ec2.md) |

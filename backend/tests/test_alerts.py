@@ -35,6 +35,9 @@ def test_rule_fires_and_resolves_in_direct_mode(db, fake_notifier):
 
 
 def test_operators_and_metrics(db):
+    from app.services.ingestion import run_job
+
+    run_job(db, "metrics", triggered_by="test")  # fresh 5-minute samples so CPU/memory rules have data
     for metric in ("daily_cost", "budget_used_pct", "forecast_budget_pct", "cost_anomaly_pct", "resource_cpu", "resource_memory", "idle_resource_count"):
         r = _rule(db, name=f"m-{metric}", metric=metric, operator=">=", threshold=0)
         value, detail = alert_engine.compute_value(db, r)

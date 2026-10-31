@@ -208,10 +208,28 @@ def run_job(db: Session, job: str, triggered_by: str = "scheduler", providers: O
 def backfill_if_empty(db: Session) -> bool:
     count = db.scalar(select(func.count()).select_from(CostRecord))
     if count:
+        extend_history(db)
         return False
     log.info("empty database - running initial backfill of %s days", get_settings().BACKFILL_DAYS)
     run_job(db, "backfill", triggered_by="startup")
     return True
+
+
+def extend_history(db: Session) -> List[SyncRun]:
+    """If BACKFILL_DAYS was raised after the first start, fetch the older days that are missing.
+
+    Runs once at startup; costs only one provider call per provider and only when there is a gap.
+    """
+    s = get_settings()
+    target = local_today() - timedelta(days=s.BACKFILL_DAYS)
+    runs = []
+    for name, provider in get_providers(db).items():
+        earliest = db.scalar(select(func.min(CostRecord.usage_date)).where(CostRecord.provider == name))
+        if earliest is None or earliest <= target + timedelta(days=1):
+            continue
+        log.info("extending %s history from %s back to %s", name, earliest, target)
+        runs.append(sync_provider(db, name, provider, job="backfill", cost_start=target, cost_end=earliest, triggered_by="startup"))
+    return runs
 
 
 def apply_retention(db: Session) -> Dict[str, int]:

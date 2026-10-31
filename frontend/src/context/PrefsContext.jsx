@@ -1,8 +1,9 @@
-// User preferences: theme (dark/light), display currency (USD/INR) and the shared filter state
-// used by Dashboard, Cost Explorer and Resources. Theme/currency persist in localStorage,
-// filters in sessionStorage.
+// User preferences: theme (dark/light), display currency (USD/INR), the shared filter state used by
+// Dashboard, Cost Explorer and Resources, and the server's date bounds (today + first date with data).
+// Theme/currency persist in localStorage, filters in sessionStorage.
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { api } from '../api/client';
+import { defaultBounds, resolveRange } from '../utils/dates';
 import { compact, money } from '../utils/format';
 
 const PrefsContext = createContext(null);
@@ -23,7 +24,20 @@ function save(storage, key, value) {
   }
 }
 
-export const DEFAULT_FILTERS = { provider: 'all', environment: 'all', resource_type: 'all', days: 30, start: '', end: '' };
+// `range` holds either a relative preset ({preset: 'last_30_days'}) or fixed dates ({preset: 'custom', start, end}).
+export const DEFAULT_RANGE = { preset: 'last_30_days', start: '', end: '' };
+export const DEFAULT_FILTERS = { provider: 'all', environment: 'all', resource_type: 'all', range: DEFAULT_RANGE };
+
+function loadFilters() {
+  const stored = load(sessionStorage, 'cloudlens.filters', {});
+  const f = { ...DEFAULT_FILTERS, ...stored };
+  if (!f.range || typeof f.range !== 'object') f.range = DEFAULT_RANGE; // older format stored `days`
+  delete f.days;
+  delete f.start;
+  delete f.end;
+  delete f.custom;
+  return f;
+}
 
 export function PrefsProvider({ children }) {
   const [theme, setTheme] = useState(() => {
@@ -35,7 +49,8 @@ export function PrefsProvider({ children }) {
   });
   const [currency, setCurrencyState] = useState(() => load(localStorage, 'cloudlens.currency', null));
   const [settings, setSettings] = useState(null);
-  const [filters, setFiltersState] = useState(() => ({ ...DEFAULT_FILTERS, ...load(sessionStorage, 'cloudlens.filters', {}) }));
+  const [bounds, setBounds] = useState(null);
+  const [filters, setFiltersState] = useState(loadFilters);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -47,6 +62,10 @@ export function PrefsProvider({ children }) {
   }, [theme]);
 
   const refreshSettings = useCallback(() => api.get('/settings').then(setSettings).catch(() => {}), []);
+  const refreshBounds = useCallback(
+    () => api.get('/costs/date-bounds').then(setBounds).catch(() => setBounds((b) => b || defaultBounds())),
+    [],
+  );
 
   const setCurrency = useCallback((c) => {
     setCurrencyState(c);
@@ -64,6 +83,8 @@ export function PrefsProvider({ children }) {
   const value = useMemo(() => {
     const cur = currency || settings?.default_currency || 'USD';
     const rate = settings?.exchange_rate_inr || 84.2;
+    const b = bounds || defaultBounds();
+    const range = resolveRange(filters.range, b);
     return {
       theme,
       toggleTheme: () => setTheme((t) => (t === 'dark' ? 'light' : 'dark')),
@@ -74,31 +95,27 @@ export function PrefsProvider({ children }) {
       fmtCompact: (usd) => compact(usd, cur, rate),
       settings,
       refreshSettings,
+      bounds: b,
+      boundsReady: Boolean(bounds),
+      refreshBounds,
       filters,
+      range, // resolved: { start, end, preset, label, days }
+      filterQuery: {
+        provider: filters.provider,
+        environment: filters.environment,
+        resource_type: filters.resource_type,
+        start: range.start,
+        end: range.end,
+      },
       setFilters,
+      setRange: (r) => setFilters({ range: r }),
       resetFilters: () => setFilters({ ...DEFAULT_FILTERS }),
     };
-  }, [theme, currency, settings, setCurrency, refreshSettings, filters, setFilters]);
+  }, [theme, currency, settings, bounds, setCurrency, refreshSettings, refreshBounds, filters, setFilters]);
 
   return <PrefsContext.Provider value={value}>{children}</PrefsContext.Provider>;
 }
 
 export function usePrefs() {
   return useContext(PrefsContext);
-}
-
-// Convert UI filter state into API query params
-export function filterParams(f) {
-  const p = {
-    provider: f.provider,
-    environment: f.environment,
-    resource_type: f.resource_type,
-  };
-  if (f.start && f.end) {
-    p.start = f.start;
-    p.end = f.end;
-  } else {
-    p.days = f.days;
-  }
-  return p;
 }

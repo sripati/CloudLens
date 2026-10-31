@@ -23,6 +23,7 @@ Screenshots are in [../screenshots/](../screenshots/) (dark and light).
 - **Page header:** title and subtitle, page actions, the **USD $ / INR ₹** toggle, the **Light/Dark mode** toggle,
   and the user chip (name, role, sign out).
 - **Filter bar** (Dashboard, Cost Explorer, Resources): provider segmented control, environment and
-  resource-type selects, date-range presets (Cost Explorer adds 180D and Custom), and *Reset filters*.
+  resource-type selects, the **date-range calendar** (quick ranges computed from today, or a validated custom range;
+  see [dashboard.md](dashboard.md#date-range-picker)), and *Reset filters*.
   Filters are shared between these screens for the browser session.
 - Layout is responsive: at phone width the sidebar stacks on top, cards wrap, and tables scroll sideways.

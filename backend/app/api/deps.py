@@ -51,22 +51,35 @@ def _split(value: Optional[str], allowed: Optional[List[str]] = None) -> List[st
     return items
 
 
+MAX_RANGE_DAYS = 731  # longest selectable range (inclusive): about 2 years
+
+
+def validate_range(start: date, end: date, today: date) -> None:
+    """Shared date-range rules, mirrored by the frontend DateRangePicker."""
+    if start > today:
+        raise HTTPException(422, f"Start date {start.isoformat()} is in the future. The latest date with data is today ({today.isoformat()}).")
+    if end > today:
+        raise HTTPException(422, f"End date {end.isoformat()} is in the future. The latest date with data is today ({today.isoformat()}).")
+    if start > end:
+        raise HTTPException(422, f"Start date {start.isoformat()} must be on or before the end date {end.isoformat()}.")
+    if (end - start).days + 1 > MAX_RANGE_DAYS:
+        raise HTTPException(422, f"Date range is {(end - start).days + 1} days; the maximum is {MAX_RANGE_DAYS} days.")
+
+
 def get_filters(
-    start: Optional[date] = Query(None, description="Start date (inclusive), YYYY-MM-DD"),
-    end: Optional[date] = Query(None, description="End date (inclusive), YYYY-MM-DD"),
-    days: int = Query(30, ge=1, le=730, description="Used when start is not given"),
+    start: Optional[date] = Query(None, description="Start date (inclusive), YYYY-MM-DD; not in the future"),
+    end: Optional[date] = Query(None, description="End date (inclusive), YYYY-MM-DD; default today; not in the future"),
+    days: int = Query(30, ge=1, le=MAX_RANGE_DAYS, description="Used only when start is not given: range of N days ending at end"),
     provider: Optional[str] = Query(None, description="Comma separated: aws,azure,gcp"),
     environment: Optional[str] = Query(None, description="production,staging,development,unassigned"),
     resource_type: Optional[str] = Query(None, description="compute,containers,database,storage,networking,other"),
     service: Optional[str] = Query(None),
     region: Optional[str] = Query(None),
 ) -> Filters:
-    end = end or local_today()
+    today = local_today()
+    end = end or today
     start = start or end - timedelta(days=days - 1)
-    if start > end:
-        raise HTTPException(422, "start must be before end")
-    if (end - start).days > 731:
-        raise HTTPException(422, "date range limited to 2 years")
+    validate_range(start, end, today)
     return Filters(
         start=start,
         end=end,

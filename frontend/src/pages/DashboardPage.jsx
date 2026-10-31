@@ -9,22 +9,26 @@ import DonutChart from '../components/charts/DonutChart';
 import { Card, ErrorBox, Skeleton, Toast, pctColor } from '../components/ui';
 import { AlertList, BarList, KpiCard, ProviderLegendRows, ResourceTable, UtilizationPanel } from '../components/widgets';
 import { useAuth } from '../context/AuthContext';
-import { filterParams, usePrefs } from '../context/PrefsContext';
+import { usePrefs } from '../context/PrefsContext';
 import { useApi } from '../hooks/useApi';
 import { ENV_LABEL, PROVIDER_LABEL, TYPE_LABEL } from '../utils/constants';
+import { fmtRange } from '../utils/dates';
 import { dateTime, longDate, shortDate, signedPct } from '../utils/format';
+
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export default function DashboardPage() {
   const { isAdmin } = useAuth();
-  const { filters, fmtCompact, fmt, currency, rate, settings } = usePrefs();
-  const params = filterParams(filters);
-  // refresh every 60 s for the near-real-time view
-  const { data, error, loading, reload, updatedAt } = useApi('/dashboard/overview', params, { refreshMs: 60000 });
+  const { filters, fmtCompact, fmt, currency, rate, settings, filterQuery, range, bounds, boundsReady } = usePrefs();
+  // refresh every 60 s for the near-real-time view; wait for the server's date bounds first
+  const { data, error, loading, reload, updatedAt } = useApi('/dashboard/overview', filterQuery, { refreshMs: 60000, enabled: boundsReady });
   const [toast, setToast] = useState('');
   const [syncing, setSyncing] = useState(false);
 
   const s = data?.summary;
-  const days = s?.filters?.days || filters.days;
+  const days = range.days;
+  const rangeName = range.preset === 'custom' ? fmtRange(range.start, range.end) : range.label;
+  const monthName = MONTH_NAMES[Number(bounds.today.slice(5, 7)) - 1];
   const keys = data?.trend?.keys || [];
   const scopeBits = [
     filters.provider === 'all' ? 'All providers' : PROVIDER_LABEL[filters.provider],
@@ -61,9 +65,9 @@ export default function DashboardPage() {
       <ErrorBox error={error} onRetry={reload} />
 
       <section aria-label="Key metrics" className="grid-kpi">
-        <KpiCard loading={!s} label={`Total spend · last ${days} days`} value={s && fmtCompact(s.period_total)}
-          sub={s && `${signedPct(s.period_change_pct)} vs previous ${days} days`} subColor={up ? 'var(--warn)' : 'var(--ok)'} />
-        <KpiCard loading={!s} label={`Month to date · ${new Date().toLocaleString('en', { month: 'short' })}`} value={s && fmtCompact(s.month.mtd)}
+        <KpiCard loading={!s} label={`Total spend · ${rangeName}`} value={s && fmtCompact(s.period_total)}
+          sub={s && `${signedPct(s.period_change_pct)} vs previous ${days} day${days === 1 ? '' : 's'}`} subColor={up ? 'var(--warn)' : 'var(--ok)'} />
+        <KpiCard loading={!s} label={`Month to date · ${monthName}`} value={s && fmtCompact(s.month.mtd)}
           bar={budget?.used_pct ?? 0} barColor={pctColor(budget?.used_pct)}
           sub={s && (budget?.applies_to_filtered_view ? `${Math.round(budget.used_pct)}% of ${fmtCompact(budget.budget)} budget` : `Budget applies to provider scope (${fmtCompact(budget.budget)})`)} />
         <KpiCard loading={!s} label="Forecast · month end" value={s && fmtCompact(s.month.forecast)}
@@ -85,7 +89,7 @@ export default function DashboardPage() {
             <Skeleton height={280} />
           )}
         </Card>
-        <Card className="flex-1" title="Spend by provider" subtitle={`Last ${days} days · ${scopeBits}`}>
+        <Card className="flex-1" title="Spend by provider" subtitle={`${fmtRange(range.start, range.end)} · ${scopeBits}`}>
           {data ? (
             <>
               <DonutChart rows={data.by_provider} />
@@ -100,7 +104,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="row-wrap">
-        <Card className="flex-third" title="Spend by resource type" subtitle={`Last ${days} days`}>
+        <Card className="flex-third" title="Spend by resource type" subtitle={fmtRange(range.start, range.end)}>
           {data ? <BarList rows={data.by_resource_type} highlight={filters.resource_type} /> : <Skeleton height={220} />}
         </Card>
         <Card className="flex-third" title="Resource utilization" subtitle="Current CPU and memory · alert threshold 80%">
@@ -117,7 +121,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <Card title="Top resources by cost" subtitle={`Cost for the last ${days} days · utilization is the latest CPU sample (storage: capacity used)`}
+      <Card title="Top resources by cost" subtitle={`Cost for ${fmtRange(range.start, range.end)} · utilization is the latest CPU sample (storage: capacity used)`}
         actions={<Link to="/resources" className="btn link">View all resources</Link>}>
         <ResourceTable rows={data?.top_resources || []} loading={loading} compact />
       </Card>

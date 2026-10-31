@@ -131,3 +131,80 @@ def test_reports(client, viewer_headers):
     assert r["total"] > 0 and r["by_provider"]
     assert client.get(f"{API}/reports/monthly", params={"month": "bad"}, headers=viewer_headers).status_code == 422
     assert "Recommendations" in client.get(f"{API}/reports/monthly.csv", headers=viewer_headers).text
+
+
+# ---------------------------------------------------------------- date range validation & range reports
+def _today():
+    from app.services.ingestion import local_today
+
+    return local_today()
+
+
+def test_date_bounds(client, viewer_headers):
+    b = client.get(f"{API}/costs/date-bounds", headers=viewer_headers).json()
+    assert b["today"] == _today().isoformat()
+    assert b["min_date"] <= b["max_date"] <= b["today"]
+    assert b["max_range_days"] == 731
+
+
+def test_future_dates_rejected(client, viewer_headers):
+    from datetime import timedelta
+
+    t = _today()
+    tomorrow = (t + timedelta(days=1)).isoformat()
+    for path in ("/dashboard/overview", "/costs/daily", "/reports/summary", "/resources"):
+        r = client.get(f"{API}{path}", params={"start": t.isoformat(), "end": tomorrow}, headers=viewer_headers)
+        assert r.status_code == 422 and "future" in r.json()["detail"], path
+    r = client.get(f"{API}/dashboard/summary", params={"start": tomorrow}, headers=viewer_headers)
+    assert r.status_code == 422 and "Start date" in r.json()["detail"]
+    future_month = (t.replace(day=1) + timedelta(days=40)).strftime("%Y-%m")
+    assert client.get(f"{API}/reports/monthly", params={"month": future_month}, headers=viewer_headers).status_code == 422
+
+
+def test_start_after_end_and_max_span(client, viewer_headers):
+    from datetime import timedelta
+
+    t = _today()
+    r = client.get(f"{API}/costs/daily", params={"start": t.isoformat(), "end": (t - timedelta(days=3)).isoformat()}, headers=viewer_headers)
+    assert r.status_code == 422 and "on or before" in r.json()["detail"]
+    r = client.get(f"{API}/costs/daily", params={"start": (t - timedelta(days=731)).isoformat(), "end": t.isoformat()}, headers=viewer_headers)
+    assert r.status_code == 422 and "maximum" in r.json()["detail"]
+    ok = client.get(f"{API}/costs/daily", params={"start": (t - timedelta(days=730)).isoformat(), "end": t.isoformat()}, headers=viewer_headers)
+    assert ok.status_code == 200 and len(ok.json()["points"]) == 731
+    # a single day (start == end) is valid
+    one = client.get(f"{API}/costs/daily", params={"start": t.isoformat(), "end": t.isoformat()}, headers=viewer_headers)
+    assert len(one.json()["points"]) == 1
+
+
+def test_monthly_follows_selected_range(client, viewer_headers):
+    from datetime import timedelta
+
+    t = _today()
+    start = (t.replace(day=1) - timedelta(days=1)).replace(day=10)  # 10th of last month
+    r = client.get(f"{API}/costs/monthly", params={"start": start.isoformat(), "end": t.isoformat()}, headers=viewer_headers).json()
+    assert [m["month"] for m in r["months"]] == [start.strftime("%Y-%m"), t.strftime("%Y-%m")]
+    first = r["months"][0]
+    assert first["partial"] is True and first["start"] == start.isoformat()
+    assert r["months"][1]["change_basis"] == "run_rate"  # partial months compare run rate
+    total = client.get(f"{API}/dashboard/summary", params={"start": start.isoformat(), "end": t.isoformat()}, headers=viewer_headers).json()["period_total"]
+    assert abs(sum(m["total"] for m in r["months"]) - total) < 0.05
+
+
+def test_range_report_six_months(client, viewer_headers):
+    from datetime import timedelta
+
+    t = _today()
+    end = t.replace(day=1) - timedelta(days=1)  # end of last month
+    start = end.replace(day=1)
+    for _ in range(1):  # 2 full months (test data holds 60 days)
+        start = (start - timedelta(days=1)).replace(day=1)
+    rep = client.get(f"{API}/reports/summary", params={"start": start.isoformat(), "end": end.isoformat()}, headers=viewer_headers).json()
+    assert rep["period"]["days"] == (end - start).days + 1
+    months = rep["monthly"]["months"]
+    assert len(months) == 2 and all(not m["partial"] for m in months)
+    assert months[1]["change_basis"] == "total"
+    assert abs(sum(m["total"] for m in months) - rep["total"]) < 0.05
+    assert abs(sum(m["budget"] for m in months) - rep["budget"]) < 0.05
+    csv = client.get(f"{API}/reports/summary.csv", params={"start": start.isoformat(), "end": end.isoformat()}, headers=viewer_headers)
+    assert csv.status_code == 200 and "Monthly breakdown" in csv.text
+    assert f'cloudlens_report_{start.isoformat()}_to_{end.isoformat()}.csv' in csv.headers["content-disposition"]
