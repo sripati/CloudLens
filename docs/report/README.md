@@ -10,8 +10,8 @@
 **Out of date:** the Word and PDF report were written before per-cloud Mock and Live modes and don't describe them. See
 [../live-cloud-setup.md](../live-cloud-setup.md) for this feature. Regenerating needs LibreOffice (below).
 
-**Before submitting:** fill in the cover page placeholders `[Student Name]`, `[Number]`, `[Programme name]`,
-`[Institute name]` and `[Mentor name]` (in Word, or in `src/build_report.js` before regenerating).
+The cover page shows the title, the live URL (https://cloudlens.auraaum.com) and the date. It has no student,
+roll number, programme, institute or mentor lines.
 
 To regenerate after editing the content (needs Node with the `docx` package, LibreOffice, poppler-utils and python-docx):
 

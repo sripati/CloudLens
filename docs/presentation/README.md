@@ -6,6 +6,8 @@ It adds slides 9 and 10 for Mock and Live modes, and updates the cost, testing a
 An earlier 16-slide version is a Claude Slides artifact and doesn't have these changes:
 https://claude.ai/artifact/TRrgoWRe9TRkY47B4y3MuN
 
+The live site, https://cloudlens.auraaum.com, is shown on slides 1, 15 and 18.
+
 Replace the `[Student name] · [Roll no.] · [Institute]` placeholders on the first and last slides.
 
 | # | Slide | Section |
@@ -29,13 +31,14 @@ Replace the `[Student name] · [Roll no.] · [Institute]` placeholders on the fi
 | 17 | Learnings and future scope | Next |
 | 18 | Thank you / Q&A (likely questions in the notes) | Next |
 
-**The PDF is out of date:** it still shows the earlier 16 slides. To refresh it, open the `.pptx` in PowerPoint and export to PDF.
+**The PDF is out of date:** it still shows the earlier 16 slides and has no live URL. To refresh it, open the `.pptx` in PowerPoint and export to PDF.
 
 ## Demo checklist (slide 16)
 
-1. `docker compose up -d` at least 2 minutes before the viva.
-2. Open tabs: dashboard `http://localhost:8080`, mock inbox `http://localhost:8080/mock-inbox/`,
-   Prometheus alerts `http://localhost:9090/alerts`.
+1. `docker compose up -d` at least 2 minutes before the viva, or use the live site https://cloudlens.auraaum.com.
+2. Open tabs: dashboard `http://localhost:8080`, mock inbox `http://localhost:9000`,
+   Prometheus alerts `http://localhost:9090/alerts`. On the live site, the inbox and Prometheus are reached through an
+   SSH tunnel (see [../deployment-vps.md](../deployment-vps.md)).
 3. Cloud Accounts → *Clear spikes* so the demo starts clean.
 4. Check the date button shows *Last 30 days* ending today (it follows the server date).
 5. Run the seven steps; for step 4 open the date picker, pick *Last 6 months*, then type a future *To* date to show the validation message; for the alert, inject AWS ×2.5, 1 day ago, and wait about 90 seconds.

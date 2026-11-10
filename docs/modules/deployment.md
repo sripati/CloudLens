@@ -8,7 +8,7 @@
 | Image | Base | Highlights |
 |---|---|---|
 | backend | python:3.12-slim | includes the cloud SDKs; non-root uid 10001; healthcheck on `/health`; 1 uvicorn worker |
-| frontend | node:20-alpine → nginx:1.27-alpine | Multi-stage; SPA fallback; gzip; 1-year cache for `/assets`; proxies `/api`, `/health`, `/docs`, `/mock-inbox/`; security headers |
+| frontend | node:20-alpine → nginx:1.27-alpine | Multi-stage; SPA fallback; gzip; 1-year cache for `/assets`; proxies `/api`, `/health`, `/docs`; security headers |
 | mock-receiver | python:3.12-slim | Non-root; about 60 MB |
 
 nginx resolves upstreams at request time (`resolver 127.0.0.11` + variables), so the frontend starts
@@ -34,4 +34,5 @@ even if the backend is still booting.
 | `scripts/screenshots.py` | Playwright captures of every screen, both themes, plus mobile |
 | `Makefile` | `make up / down / logs / test / backup / screenshots` |
 
-Step-by-step guide: [../deployment-ec2.md](../deployment-ec2.md).
+Step-by-step guides: [../deployment-ec2.md](../deployment-ec2.md) (EC2 staging) and
+[../deployment-vps.md](../deployment-vps.md) (the live site, https://cloudlens.auraaum.com, on a Hostinger VPS with Caddy for HTTPS).

@@ -7,7 +7,7 @@ Ordered roughly by value versus effort. Each item names the files you would touc
 | Enhancement | Notes / where |
 |---|---|
 | **Database migrations with Alembic** | Tables are currently created by `create_all`. Add `alembic init`, autogenerate from `app/models`, and run `alembic upgrade head` in the backend entrypoint. Needed before changing columns in production. |
-| **HTTPS** | Caddy container in front of `frontend`, or an AWS ALB + ACM. Update `DASHBOARD_PUBLIC_URL` and `CORS_ORIGINS`. |
+| **HTTPS** | Done for the live site: Caddy on the VPS host ([deployment-vps.md](deployment-vps.md)). Still to do for EC2: a Caddy container in front of `frontend`, or an AWS ALB + ACM. Update `DASHBOARD_PUBLIC_URL` and `CORS_ORIGINS`. |
 | **Live exchange rate** | Daily job fetching USD→INR (for example the RBI reference rate) into `app_settings.exchange_rate_inr`; keep the manual override. |
 | **Per-team budgets** | New `budgets` table (scope: provider, environment, tag), so rules can reference a budget by id. Touches `settings_service.budget_for`, Settings screen. |
 | **Mark deleted resources** | Inventory only adds and updates. Use `resources.last_seen_at` to hide or flag resources no longer returned, which matters on Live. |

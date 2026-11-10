@@ -58,7 +58,7 @@ flowchart LR
 | `frontend` | built from `frontend/` (nginx) | React SPA + reverse proxy for `/api` | `HTTP_PORT` (8080 / 80) |
 | `prometheus` | prom/prometheus:v2.55.1 | Scrapes `/metrics`, evaluates alert rules | 127.0.0.1:9090 |
 | `alertmanager` | prom/alertmanager:v0.27.0 | Groups, de-duplicates and routes alerts | 127.0.0.1:9093 |
-| `mock-receiver` | built from `monitoring/mock-receiver` | Fake Slack/Teams webhook for dev/demo | 127.0.0.1:9000, `/mock-inbox/` |
+| `mock-receiver` | built from `monitoring/mock-receiver` | Fake Slack/Teams webhook for dev/demo | 127.0.0.1:9000 |
 
 Only the dashboard port is public. Prometheus, Alertmanager and the API are bound to localhost and
 reached through nginx or an SSH tunnel.

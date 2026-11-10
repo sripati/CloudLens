@@ -4,7 +4,8 @@ This guide walks through daily use of CloudLens. Details of every screen are in 
 
 ## 1. Signing in
 
-Open the dashboard URL and sign in. Your role decides what you can do:
+Open the dashboard URL and sign in: [https://cloudlens.auraaum.com](https://cloudlens.auraaum.com) for the live site, or
+http://localhost:8080 when running locally. Your role decides what you can do:
 
 - **Admin:** everything, including alert rules, cloud accounts, users and settings.
 - **Viewer:** read-only access to all dashboards and reports; can acknowledge alerts.

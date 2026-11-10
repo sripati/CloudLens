@@ -83,7 +83,8 @@ Resolved alerts are sent with a `RESOLVED:` prefix.
 ## 7. Testing alerts
 
 1. **Test message:** Alerts → *Test notification* → choose a channel → Send.
-2. **Mock inbox:** open http://localhost:8080/mock-inbox/ (auto-refreshes every 5 s).
+2. **Mock inbox:** open http://localhost:9000 (auto-refreshes every 5 s). It is bound to localhost; on a server, open
+   it through an SSH tunnel (`ssh -L 9000:localhost:9000 ...`).
 3. **Simulate a cost spike (mock mode):** Cloud Accounts → *Demo: simulate a cost spike*. Choose AWS,
    ×2.5, 1 day ago, then *Inject spike*. Within about 2 minutes the *Daily cost anomaly* and *AWS daily spend*
    rules fire, Prometheus shows them at http://localhost:9090/alerts, and Slack and Teams messages arrive. *Clear spikes*

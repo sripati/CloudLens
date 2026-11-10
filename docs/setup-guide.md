@@ -86,7 +86,7 @@ Every cloud starts in Mock mode. Live connections are set up on the **Cloud Acco
 - **Teams:** in the channel, choose *Workflows* → "Post to a channel when a webhook request is received" → copy the URL.
   The legacy Office 365 connector URL also accepts the same Adaptive Card.
 - Paste them in **Settings → Notifications** and click **Save settings**. No restart is needed. Until then, alerts go to the test
-  inbox at `/mock-inbox/`.
+  inbox at http://localhost:9000 (localhost only; on a server, use an SSH tunnel).
 - Test from **Alerts → Test notification**.
 
 ## 7. Default accounts

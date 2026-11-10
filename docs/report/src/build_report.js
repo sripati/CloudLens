@@ -5,7 +5,7 @@ const path = require('path');
 const {
   Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Table, TableRow, TableCell,
   WidthType, ShadingType, ImageRun, PageBreak, TableOfContents, Footer, Header, PageNumber,
-  LevelFormat, BorderStyle, Tab, TabStopType, LeaderType,
+  LevelFormat, BorderStyle, Tab, TabStopType, LeaderType, ExternalHyperlink,
 } = require('docx');
 
 const ROOT = path.resolve(__dirname, '..');
@@ -127,11 +127,10 @@ const cover = [
   new Paragraph({ spacing: { before: 400, after: 200 }, alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'CloudLens', bold: true, size: 64, color: '1D5FD6' })] }),
   new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 600 }, children: [new TextRun({ text: 'DevOps Dashboard for Resource and Cost Monitoring', size: 36, bold: true })] }),
   new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 120 }, children: [new TextRun({ text: 'Multi-cloud (AWS · Azure · GCP) cost aggregation, trend analysis and alerting', size: 24, color: '4A5468' })] }),
-  new Paragraph({ spacing: { before: 1400 }, alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Submitted by: [Student Name]', size: 24 })] }),
-  new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Enrolment / Roll No.: [Number]', size: 24 })] }),
-  new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Programme: [Programme name]', size: 24 })] }),
-  new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Institute: [Institute name]', size: 24 })] }),
-  new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Guide / Mentor: [Mentor name]', size: 24 })] }),
+  new Paragraph({ spacing: { before: 1400 }, alignment: AlignmentType.CENTER, children: [
+    new TextRun({ text: 'Live: ', size: 24 }),
+    new ExternalHyperlink({ link: 'https://cloudlens.auraaum.com', children: [new TextRun({ text: 'https://cloudlens.auraaum.com', size: 24, color: '1D5FD6' })] }),
+  ] }),
   new Paragraph({ spacing: { before: 400 }, alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'October 2026', size: 24 })] }),
 ];
 

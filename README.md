@@ -7,6 +7,8 @@ environment and resource type, and sends **alerts to Slack and Microsoft Teams**
 
 > Capstone project: *DevOps Dashboard for Resource and Cost Monitoring*
 
+**Live:** [https://cloudlens.auraaum.com](https://cloudlens.auraaum.com) (Hostinger VPS, HTTPS by Caddy; see [docs/deployment-vps.md](docs/deployment-vps.md))
+
 | | |
 |---|---|
 | **Backend** | Python 3.12, FastAPI, SQLAlchemy 2, APScheduler |
@@ -15,7 +17,7 @@ environment and resource type, and sends **alerts to Slack and Microsoft Teams**
 | **Cloud APIs** | AWS Cost Explorer / EC2 / RDS / CloudWatch, Azure Cost Management / Monitor, GCP Cloud Billing + BigQuery billing export / Cloud Monitoring |
 | **Alerting** | Prometheus + Alertmanager → backend webhook → Slack / Microsoft Teams |
 | **Auth** | JWT, role-based access (Admin, Viewer) |
-| **Deployment** | Docker Compose (6 containers), AWS EC2 staging |
+| **Deployment** | Docker Compose (6 containers); live on a Hostinger VPS at https://cloudlens.auraaum.com; AWS EC2 staging scripts |
 
 ---
 
@@ -53,7 +55,7 @@ docker compose up -d --build
 |---|---|
 | http://localhost:8080 | Dashboard (login `admin@cloudlens.dev` / `Admin@123` unless changed in `.env`) |
 | http://localhost:8080/docs | Swagger API documentation |
-| http://localhost:8080/mock-inbox/ | Test Slack/Teams inbox (alerts land here until webhooks are saved in Settings) |
+| http://localhost:9000 | Test Slack/Teams inbox (localhost only; alerts land here until webhooks are saved in Settings) |
 | http://localhost:9090 | Prometheus (localhost only) |
 | http://localhost:9093 | Alertmanager (localhost only) |
 
@@ -120,6 +122,7 @@ make test-backend-pg # same backend suite against PostgreSQL
 | [docs/api-reference.md](docs/api-reference.md) | REST endpoints |
 | [docs/database.md](docs/database.md) | Schema, indexes, retention |
 | [docs/alerting.md](docs/alerting.md) | Prometheus → Alertmanager → Slack/Teams pipeline |
+| [docs/deployment-vps.md](docs/deployment-vps.md) | Public deployment on a VPS with a domain and HTTPS (the live site) |
 | [docs/deployment-ec2.md](docs/deployment-ec2.md) | Staging deployment on AWS EC2 |
 | [docs/testing.md](docs/testing.md) | Test strategy and results |
 | [docs/cost-optimization.md](docs/cost-optimization.md) | Savings features and the platform's own running cost |

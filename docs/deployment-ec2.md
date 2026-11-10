@@ -2,6 +2,8 @@
 
 The same `docker-compose.yml` that runs locally runs on a single EC2 instance.
 
+The live site, https://cloudlens.auraaum.com, runs on a Hostinger VPS instead; see [deployment-vps.md](deployment-vps.md).
+
 ## 1. Sizing
 
 | Item | Recommendation | Approx. cost (ap-south-1, on-demand) |
@@ -93,7 +95,7 @@ volumes `pgdata`, `promdata` and `amdata`.
 ## 7. Hardening checklist (before production)
 
 - [ ] Put the instance behind HTTPS: an ALB with an ACM certificate, or Caddy/Certbot in front of nginx
-- [ ] Remove the `/mock-inbox/` block from `frontend/nginx.conf` and the `mock-receiver` service
+- [ ] Optionally remove the `mock-receiver` service (the inbox is localhost-only; nginx no longer proxies it)
 - [ ] Rotate the default passwords and `JWT_SECRET`
 - [ ] Enable automated EBS snapshots (Data Lifecycle Manager) or schedule `scripts/backup_db.sh` with cron
 - [ ] Restrict port 80/443 to the corporate IP range if the dashboard is internal

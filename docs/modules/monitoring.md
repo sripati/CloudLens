@@ -31,7 +31,7 @@ A small FastAPI app standing in for Slack and Teams:
 | `POST /teams` | Accepts Adaptive Card payloads |
 | `GET /messages?channel=` | JSON inbox, newest first (max 500, in memory) |
 | `DELETE /messages` | Clear |
-| `GET /` | Auto-refreshing HTML inbox (through nginx at `/mock-inbox/`) |
+| `GET /` | Auto-refreshing HTML inbox at http://localhost:9000 (not proxied by nginx, so it is never public) |
 
 Use it in development, CI and the viva demo. In production, point the webhook URLs at real
 Slack and Teams and remove the service and its nginx location.
