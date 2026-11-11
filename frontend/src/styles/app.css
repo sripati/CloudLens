@@ -11,10 +11,12 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 /* ---------- layout ---------- */
 .shell { display: flex; flex-wrap: wrap; min-height: 100vh; }
-.sidebar { flex: 1 1 236px; max-width: 100%; padding: 22px 14px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
-.main { flex: 999 1 560px; min-width: 0; padding: 28px 32px 32px; display: flex; flex-direction: column; gap: 20px; max-width: 1480px; }
+/* sidebar is as wide as its longest label; the main area takes the rest of the screen */
+.sidebar { flex: 0 0 auto; width: max-content; min-width: 200px; max-width: 280px; padding: 22px 14px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
+.main { flex: 1 1 0; min-width: 0; padding: 28px 32px 32px; display: flex; flex-direction: column; gap: 20px; }
 @media (max-width: 820px) {
-  .sidebar { border-right: 0; border-bottom: 1px solid var(--border); }
+  .sidebar { flex-basis: 100%; width: 100%; max-width: none; border-right: 0; border-bottom: 1px solid var(--border); }
+  .main { flex-basis: 100%; }
   .main { padding: 20px 16px; }
   .sidebar .side-box { display: none; }
 }
