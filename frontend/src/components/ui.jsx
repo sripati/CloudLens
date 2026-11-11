@@ -1,6 +1,7 @@
 // Small reusable UI primitives.
 import { useEffect } from 'react';
 import { STATUS_LABEL } from '../utils/constants';
+import Icon from './Icon';
 
 export function Card({ title, subtitle, actions, children, className = '', ...rest }) {
   return (
@@ -101,7 +102,9 @@ export function Toast({ message, onDone }) {
   if (!message) return null;
   return (
     <div className="toast" role="status">
-      {message}
+      <Icon name="bell" size={18} />
+      <span>{message}</span>
+      <button type="button" className="toast-close" aria-label="Dismiss" onClick={onDone}>×</button>
     </div>
   );
 }
