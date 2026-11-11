@@ -8,8 +8,6 @@ https://claude.ai/artifact/TRrgoWRe9TRkY47B4y3MuN
 
 The live site, https://cloudlens.auraaum.com, is shown on slides 1, 15 and 18.
 
-Replace the `[Student name] · [Roll no.] · [Institute]` placeholders on the first and last slides.
-
 | # | Slide | Section |
 |---|---|---|
 | 1 | CloudLens (title) | Why |
